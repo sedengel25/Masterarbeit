@@ -14,7 +14,7 @@ list_of_files <- list.files(raw_data_path)
 
 # Choose n random files
 int_n <- 3
-int_random <- sample(1:length(list_of_files), n)
+int_random <- sample(1:length(list_of_files), int_n)
 
 
 dt <- combine_files_to_dt(list = list_of_files[int_random], path = raw_data_path) 
