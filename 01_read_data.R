@@ -12,8 +12,12 @@ source("./src/01_utils.R")
 ################################################################################
 list_of_files <- list.files(raw_data_path)
 
+# Choose n random files
+int_n <- 3
+int_random <- sample(1:length(list_of_files), n)
 
-dt <- combine_files_to_dt(list = list_of_files, path = raw_data_path) 
+
+dt <- combine_files_to_dt(list = list_of_files[int_random], path = raw_data_path) 
 
 ################################################################################
 # Save data
