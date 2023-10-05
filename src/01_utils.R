@@ -12,9 +12,11 @@
 # Output: ...
 combine_files_to_dt <- function(list, path){
 	list_of_dt <- lapply(list, function(x){
+		provider <- strsplit(x, split = "_")[[1]][1]
 		dt <- paste0(path,x) %>% fread()
 		dt %>% 
-			mutate(id = as.character(id))
+			mutate(id = as.character(id), 
+						 provider = provider)
 	})
 	
 	list_of_non_empty_dt <- list_of_dt[sapply(list_of_dt, nrow) > 0]
