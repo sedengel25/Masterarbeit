@@ -13,8 +13,8 @@ library(readr)
 library(here)
 
 # Paths
-raw_data_path <- here("data/raw")
-processed_data_1_path <- here("data/processed/01")
+raw_data_path <- here("data/raw//")
+processed_data_1_path <- here("data/processed/01//")
 
 
-dt_path <- paste0(processed_data_1_path,"/dt.rds")
+dt_path <- paste0(processed_data_1_path,"dt.rds")
