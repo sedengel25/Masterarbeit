@@ -4,7 +4,7 @@
 # This file contains all functions to execute 01_rename_transform.R
 ################################################################################
 # Documentation: transform_to_rds
-# Usage: transform_to_rds(list, path)
+# Usage: transform_to_rds(list, input_path, output_path)
 # Description: Reads all files, transforms them to rds and give them an id
 # Args/Options: list, input_path, output_path
 # Returns: ...
