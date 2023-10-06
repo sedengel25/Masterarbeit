@@ -18,3 +18,7 @@ processed_data_1_path <- here("data/processed/01//")
 
 
 dt_path <- paste0(processed_data_1_path,"dt.rds")
+
+
+# Configurations
+options(scipen = 999)
