@@ -10,11 +10,15 @@ source("./src/03_utils.R")
 ################################################################################
 # Read all csv-files of e-scooter mobility data and combine it into a datatable
 ################################################################################
-list_of_files <- list.files(raw_data_path)
+list_of_files <- list.files(processed_data_1_path)
 
-# Choose n random files
-int_n <- 3
-int_random <- sample(1:length(list_of_files), int_n)
+# Choose the files you want to read in, based on the overview
+dt_table <- read_rds(dt_table_path)
+
+list_of_ids <- choose_datasets(dt = dt_table,
+															 days = 14,
+															 provider = "BOLT",
+															 city = "BERLIN")
 
 
 dt <- combine_files_to_dt(list = list_of_files[int_random], 
