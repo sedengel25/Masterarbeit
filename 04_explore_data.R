@@ -86,6 +86,8 @@ dt_summary_cluster <- dt_kmeans_reversed %>%
 dt_summary_cluster
 
 
+# k-means() clusters weekdays and hours of the day but not durations
+
 # DBSCAN
 dt_dbcsan <- dt %>%
 	mutate(weekday = wday(start_time),
