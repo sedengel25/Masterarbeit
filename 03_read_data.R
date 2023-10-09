@@ -21,8 +21,10 @@ list_of_ids <- choose_datasets(dt = dt_table,
 															 city = "BERLIN")
 
 
-dt <- combine_files_to_dt(list = list_of_files[int_random], 
-													path = raw_data_path) 
+dt <- combine_files_to_dt(list = list_of_files[list_of_ids], 
+													path = processed_data_1_path) 
+
+
 
 ################################################################################
 # Save data

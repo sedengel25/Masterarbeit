@@ -16,7 +16,7 @@ combine_files_to_dt <- function(list, path){
 		
 		provider <- strsplit(x, split = "_")[[1]][1]
 		city <- strsplit(x, split = "_")[[1]][2]
-		dt <- paste0(path,x) %>% fread()
+		dt <- paste0(path,x) %>% read_rds()
 		dt %>% 
 			mutate(id = as.character(id), 
 						 provider = provider,
@@ -52,18 +52,13 @@ choose_datasets <- function(dt, days, provider, city){
 				 BERLIN, HAMBURG, MUNICH, COLOGNE (char)")
 	}
 	
-  print(days)
-	print(provider)
-	print(city)
-
-	
 	ids <- which(dt$days==days &
 							 	dt$provider==provider &
 							 	dt$city==city)
 	
-	print(ids)
 	
 	list_of_ids <- dt[ids,"id"] %>% as.list()
+	list_of_ids <- list_of_ids$id
 	
 	return(list_of_ids)
 }
