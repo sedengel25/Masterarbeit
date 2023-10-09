@@ -14,7 +14,8 @@ library(here)
 library(dbscan)
 library(lubridate)
 library(cluster)
-
+library(factoextra)
+library(scales)
 # Paths
 raw_data_path <- here("data/raw//")
 processed_data_1_path <- here("data/processed/01//")
