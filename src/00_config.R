@@ -16,6 +16,9 @@ library(lubridate)
 library(cluster)
 library(factoextra)
 library(scales)
+library(clusterCrit)
+
+
 # Paths
 raw_data_path <- here("data/raw//")
 processed_data_1_path <- here("data/processed/01//")

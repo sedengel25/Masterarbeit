@@ -1,16 +1,20 @@
-write_rds_auto <- function(obj, path) {
-	# Get the object name
-	obj_name <- deparse(substitute(obj))
-	
-	# Construct the full file path with the object name as filename
-	full_path <- file.path(path, paste0(obj_name, ".rds"))
-	
-	# Write the object to the .rds file
-	write_rds(obj, full_path)
-	
-	cat(paste("Saved", obj_name, "to", full_path))
-}
+################################################################################
+# Big Data Analytics in Transportation (TU Dresden)
+# Master Thesis
+# This file contains all functions that are needed over and over again
+################################################################################
 
-# Example usage
-df <- data.frame(a = 1:5, b = 6:10)
-save_rds_auto(df, "C:/your_directory_path_here")
+# Documentation: sample_subset
+# Usage: sample_subset(dt)
+# Description: Takes a subset of dt based on a random selection dep. on size
+# Args/Options: dt
+# Returns: datatable
+# Output: ...
+sample_subset <- function(dt, size) {
+	vector_rand_inx <- sample(1:nrow(dt), size = size)
+	
+	dt_sub <- dt %>%
+		slice(vector_rand_inx)
+	
+	return(dt_sub)
+}
