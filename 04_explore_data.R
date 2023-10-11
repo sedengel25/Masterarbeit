@@ -9,92 +9,75 @@ source("./src/04_utils.R")
 
 dt <- read_rds(dt_path)
 
-# Inspect number of trips over time
-# posixct_min_start_time <- min(dt$start_time)
-# posixct_max_start_time <- max(dt$start_time)
+################################################################################
+# Trying to detect maintenance- /charging- / relocation-trips
+################################################################################
 
 dt <- dt %>%
-	mutate(date = as.Date(start_time))
-
-
-# dt_trips_per_day <- dt %>%
-# 											group_by(date) %>%
-# 											summarise(n = n()) %>%
-# 											as.data.table()
+	filter(duration <= 1440, 
+				 distance <= 5000,
+				 duration >100)
 
 
 
 dt <- dt %>%
-	mutate(avg_kmh = (distance/duration)*0.06) %>%
-	# Where cut off value? I don't want to cut off relocating
-	filter(avg_kmh <= 50, 
-				 duration <= 1440,
-				 distance <= 100000)
+	mutate(weekday = wday(start_time, week_start = 1),
+				 start_hour = hour(start_time),
+				 dest_hour = hour(dest_time),
+				 date = as.Date(start_time)) %>%
+	select(c("start_hour", "duration", "dest_hour"))
+
+dt_norm <- normalize_dt(dt = dt)
+
+
+# GMM --------------------------------------
+gmm <- Mclust(data = dt_norm[,c(1,2)], G = 4)
+dt_c <- dt %>%
+	mutate(cluster = gmm$classification)
+
+
+
+plot <- create_3d_cluster_plot(dt = dt_c)
+plot
+
+dt_test <- dt_c %>%
+	filter(cluster %in% c(2,3,4)) 
+
+dt_test$dest_hour %>% hist()
+
+
 
 ################################################################################
-# Clustering Analysis
+# Descriptive Analysis
 ################################################################################
+dt_descr_anal <- dt %>%
+	mutate(weekday = wday(start_time, week_start = 1),
+				 start_hour = hour(start_time),
+				 date = as.Date(start_time)) %>%
+	select(c("date", "weekday", "start_hour", "duration", "distance"))
 
-# K-means --------------------------------------
 
-dt_kmeans <- dt %>%
-	mutate(weekday = wday(start_time),
-				 start_hour = hour(start_time)) %>%
-	select(c("duration", "weekday", "start_hour"))
 
-dt_kmeans_normalized <- normalize_dt(dt = dt_kmeans)
+dt_trips_per_h <- trips_per_h(dt = dt_descr_anal)
 
-# Find optimal parameters
+dt_trips_per_wd <- trips_per_wd(dt = dt_descr_anal)
 
-int_k <- 8
+dt_trips_per_date <- trips_per_date(dt = dt_descr_anal)
 
-model_kmeans <- kmeans(dt_kmeans_normalized, int_k, nstart = 1L)
+dt_trips_per_date_wd <- trips_per_date_wd(dt = dt_descr_anal)
 
-dt_kmeans_normalized <- add_cluster(dt = dt_kmeans_normalized,
-																		cluster_model = model_kmeans)
-dt_kmeans_reversed <- denorm_dt(dt = dt_kmeans, 
-														    dt_norm = dt_kmeans_normalized)
-dt_kmeans_reversed <- add_cluster(dt = dt_kmeans_reversed,
-																		cluster_model = model_kmeans)
-dt_summary_cluster <- create_summary_for_clusters(dt = dt_kmeans_reversed)
+ggplot_line_starthour <- create_start_hour_plot(dt = dt_trips_per_h)
 
-dt_kmeans_trips_per_hour <- trips_per_cluster_and_h(dt = dt_kmeans_reversed)
+ggplot_line_weekday <- create_weekday_plot(dt = dt_trips_per_wd)
 
-plot_kmeans <- create_start_hour_plot(dt = dt_kmeans_trips_per_hour)
+ggplot_line_date <- create_date_plot(dt = dt_trips_per_date)
 
-dt_kmeans_normalized_reduced <- sample_subset(dt = dt_kmeans_normalized,
-																							size = 10000)
-num_kmeans_sil <- calc_silhoutte_score(dt = dt_kmeans_normalized_reduced)
+ggplot_line_date_wd <- create_date_and_wd_plot(dt = dt_trips_per_date_wd)
 
-# DBSCAN --------------------------------------
 
-dt_dbcsan <- dt %>%
-	mutate(weekday = wday(start_time),
-				 start_hour = hour(start_time)) %>%
-	select(c("duration", "weekday", "start_hour"))
 
-dt_dbcsan_normalized <- normalize_dt(dt = dt_dbcsan)
 
-# Find optimal parameters
-
-int_min_pts <- 100
-
-int_eps <- 0.1
-
-model_dbscan <- dbscan(dt_dbcsan_normalized, eps = int_eps, minPts = int_min_pts)
-
-dt_dbcsan_normalized <- add_cluster(dt = dt_dbcsan_normalized, 
-																		cluster_model = model_dbscan)
-dt_dbcsan_reversed <- denorm_dt(dt = dt_dbcsan, 
-														    dt_norm = dt_dbcsan_normalized)
-dt_dbcsan_reversed <- add_cluster(dt = dt_dbcsan_reversed,
-																	cluster_model = model_dbscan)
-dt_dbcsan_trips_per_hour <- trips_per_cluster_and_h(dt = dt_dbcsan_reversed)
-
-dt_dbcsan_normalized_reduced <- sample_subset(dt = dt_dbcsan_normalized,
-																							size = 10000)
-num_dbscan_sil <- calc_silhoutte_score(dt = dt_dbcsan_normalized_reduced)
-################################################################################
+#############################################################################
 # Ablage
 ################################################################################
 # dt_dbscan_pca <- prcomp(dt_dbscan)
@@ -106,10 +89,6 @@ num_dbscan_sil <- calc_silhoutte_score(dt = dt_dbcsan_normalized_reduced)
 # 	as.data.table %>%
 # 	select("PC1","PC2")
 # int_min_pts <- 4
-# 
-# kNNdistplot(dt_dbscan_pca, k = int_min_pts)
-# int_eps <- 0.00009
-# model_dbscan_pca <- dbscan(dt_dbscan_pca, eps = int_eps, minPts = int_min_pts)
 
 
 # dt_dates <- seq(from = as.Date(posixct_min_start_time), 
@@ -126,16 +105,17 @@ num_dbscan_sil <- calc_silhoutte_score(dt = dt_dbcsan_normalized_reduced)
 # 
 # ggplot(dt_temp)+
 # 	geom_density(aes(x=duration))
-# ks <- 1:10
-# tot.withinss <- sapply(ks, function(k) {
-# 	kmeans_result <- kmeans(dt_kmeans_normalized, k, nstart = 10L)
-# 	kmeans_result$tot.withinss
-# })
+
+ 
+# sf_points <- st_as_sf(dt_most_trips,
+# 											coords = c("start_loc_lon", "start_loc_lat"),
+# 											crs = 4326)
 # 
-# withinss_df <- cbind.data.frame(ks, tot.withinss)
+# shp_berlin <- st_read(shp_file_berlin_path)
 # 
-# ggplot(withinss_df, aes(ks, tot.withinss)) +
-# 	geom_point() +
-# 	geom_line() +
-# 	scale_y_continuous(name = "Total WSS", trans = "log10") +
-# 	scale_x_continuous(name = "Number of clusters", breaks = ks)
+# sf_points_to_district <- st_join(sf_points, shp_berlin)
+# 
+# dt_trips_assigned_to_district <- as.data.table(sf_points_to_district) %>%
+# 	select(Gemeinde_s, distance, duration) %>%
+# 	mutate(Gemeinde_s = int_vec <- as.integer(sub("^0+", "", Gemeinde_s)))
+

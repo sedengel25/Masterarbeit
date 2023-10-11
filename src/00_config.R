@@ -17,7 +17,12 @@ library(cluster)
 library(factoextra)
 library(scales)
 library(clusterCrit)
-
+library(plotly)
+library(ggdendro)
+library(mclust)
+library(leaflet)
+library(sf)
+library(rlang)
 
 # Paths
 raw_data_path <- here("data/raw//")
@@ -28,6 +33,9 @@ processed_data_3_path <- here("data/processed/03//")
 dt_table_path <- paste0(processed_data_2_path, "dt_table.rds")
 dt_plot_path <- paste0(processed_data_2_path, "dt_plot.png")
 dt_path <- paste0(processed_data_3_path,"dt.rds")
+
+external_data_path <- here("data/external//")
+shp_file_berlin_path <- paste0(external_data_path, "bezirksgrenzen.shp")
 
 
 # Configurations
