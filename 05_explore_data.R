@@ -5,9 +5,43 @@
 ################################################################################
 source("./src/00_config.R")
 source("./src/00_utils.R")
-source("./src/04_utils.R")
+source("./src/05_utils.R")
 
 dt <- read_rds(dt_path)
+summary(dt)
+
+
+################################################################################
+# Testing
+################################################################################
+dt <- dt %>%
+	mutate(year = year(start_time),
+				 month = month(start_time),
+				 day = day(start_time),
+				 hour = hour(start_time),
+				 min = minute(start_time),
+				 sec = second(start_time)) %>%
+	mutate(scooter_id = id,
+				 id = paste0(id,
+				 						"_",
+				 						year,
+				 						"_",
+				 						month,
+				 						"_",
+				 						day,
+				 						"_",
+				 						hour,
+				 						"_",
+				 						min,
+				 						"_",
+				 						sec)) %>%
+	select(-all_of(
+		c("year","month","day","hour","min","sec")
+	))
+
+
+
+list.dirs(processed_data_4_path)
 
 ################################################################################
 # Trying to detect maintenance- /charging- / relocation-trips

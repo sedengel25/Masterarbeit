@@ -23,19 +23,24 @@ library(mclust)
 library(leaflet)
 library(sf)
 library(rlang)
+library(jsonlite)
+library(R.utils)
 
 # Paths
 raw_data_path <- here("data/raw//")
 processed_data_1_path <- here("data/processed/01//")
 processed_data_2_path <- here("data/processed/02//")
 processed_data_3_path <- here("data/processed/03//")
+processed_data_4_path <- here("data/processed/04//")
 
 dt_table_path <- paste0(processed_data_2_path, "dt_table.rds")
 dt_plot_path <- paste0(processed_data_2_path, "dt_plot.png")
 dt_path <- paste0(processed_data_3_path,"dt.rds")
 
 external_data_path <- here("data/external//")
+bolt_berlin_data_path <- paste0(external_data_path, "BOLT/BERLIN")
 shp_file_berlin_path <- paste0(external_data_path, "bezirksgrenzen.shp")
+
 
 
 # Configurations
