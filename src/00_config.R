@@ -26,22 +26,38 @@ library(rlang)
 library(jsonlite)
 library(R.utils)
 
+################################################################################
 # Paths
-path_raw_data <- here("data/raw//")
-path_processed_data_1 <- here("data/processed/01//")
-path_processed_data_2 <- here("data/processed/02//")
-path_processed_data_3 <- here("data/processed/03//")
-path_processed_data_4 <- here("data/processed/04//")
+################################################################################
+# Raw data
+path_trips <- here("data/raw/trips")
+path_bolt_berlin_raw <- here("data/raw/raw/BOLT/BERLIN")
 
-path_dt_table <- paste0(path_processed_data_2, "dt_table.rds")
-path_dt_plot <- paste0(path_processed_data_2, "dt_plot.png")
-path_dt <- paste0(path_processed_data_3,"dt.rds")
+# Processed data
+path_processed_data_1 <- here("data/processed/01")
+path_processed_data_2 <- here("data/processed/02")
+path_processed_data_3 <- here("data/processed/03")
+path_processed_data_4 <- here("data/processed/04")
+path_bolt_berlin_processed <- here(path_processed_data_4, "BOLT/BERLIN")
 
-path_external_data <- here("data/external//")
-path_bolt_berlin <- paste0(path_external_data, "BOLT/BERLIN")
-path_shp_file_berlin <- paste0(path_external_data, "bezirksgrenzen.shp")
+# External data
+path_external_data <- here("data/external")
 
 
 
+# Processed files
+path_dt_table <- here(path_processed_data_2, "dt_table.rds")
+path_dt_plot <- here(path_processed_data_2, "dt_plot.png")
+path_dt <- here(path_processed_data_3,"dt.rds")
+
+
+
+# External files
+path_shp_file_berlin <- here(path_external_data, "bezirksgrenzen.shp")
+
+
+
+################################################################################
 # Configurations
+################################################################################
 options(scipen = 999)

@@ -13,7 +13,7 @@ dt <- read_rds(path_dt)
 
 
 # List all files of the raw data containing battery information
-dirs <- get_directories(path = path_bolt_berlin)[-1]
+dirs <- get_directories(path = path_bolt_berlin_raw)
 
 
 dt_battery <- data.table(
@@ -25,8 +25,10 @@ dt_battery <- data.table(
 	scooter_id = integer(0)
 )
 
-#Create rds-files containing information regarding battery-status
-lapply(dirs[-1], function(x){
+
+
+# Create rds-files containing information regarding battery-status
+lapply(dirs[1], function(x){
 	
 	files <- list.files(x, full.names = TRUE)
 	print(x)
@@ -39,11 +41,14 @@ lapply(dirs[-1], function(x){
 		dt_js <- fromJSON(file_js)
 		dt_js <- select_scooter_trips(dt = dt_js)
 		timestamp <- strsplit(y,split="\\.")[[1]][1]
-		timestamp <- strsplit(timestamp,split="/")[[1]][9]
+		timestamp <- strsplit(timestamp,split="/")[[1]]
+		length_of_split <- length(timestamp)
+		timestamp <- timestamp[length_of_split]
+		print(timestamp)
 		dt_js <- add_scooter_time_id(dt = dt_js, timestamp = timestamp)
 		dt_js <- dt_js %>%
 			select(id, lat, lng, charge, distance_on_charge, scooter_id)
-		filename <- paste0(path_processed_data_4, timestamp)
+		filename <- here(path_bolt_berlin_processed, timestamp)
 		write_rds(dt_js, filename)
 		
 	})

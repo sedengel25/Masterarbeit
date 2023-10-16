@@ -12,7 +12,7 @@
 # Output: ...
 get_directories <- function(path) {
 	dirs <- list.dirs(path, full.names = TRUE)
-	
+	dirs <- dirs[-1]
 	return(dirs)
 }
 
