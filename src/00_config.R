@@ -27,19 +27,19 @@ library(jsonlite)
 library(R.utils)
 
 # Paths
-raw_data_path <- here("data/raw//")
-processed_data_1_path <- here("data/processed/01//")
-processed_data_2_path <- here("data/processed/02//")
-processed_data_3_path <- here("data/processed/03//")
-processed_data_4_path <- here("data/processed/04//")
+path_raw_data <- here("data/raw//")
+path_processed_data_1 <- here("data/processed/01//")
+path_processed_data_2 <- here("data/processed/02//")
+path_processed_data_3 <- here("data/processed/03//")
+path_processed_data_4 <- here("data/processed/04//")
 
-dt_table_path <- paste0(processed_data_2_path, "dt_table.rds")
-dt_plot_path <- paste0(processed_data_2_path, "dt_plot.png")
-dt_path <- paste0(processed_data_3_path,"dt.rds")
+path_dt_table <- paste0(path_processed_data_2, "dt_table.rds")
+path_dt_plot <- paste0(path_processed_data_2, "dt_plot.png")
+path_dt <- paste0(path_processed_data_3,"dt.rds")
 
-external_data_path <- here("data/external//")
-bolt_berlin_data_path <- paste0(external_data_path, "BOLT/BERLIN")
-shp_file_berlin_path <- paste0(external_data_path, "bezirksgrenzen.shp")
+path_external_data <- here("data/external//")
+path_bolt_berlin <- paste0(path_external_data, "BOLT/BERLIN")
+path_shp_file_berlin <- paste0(path_external_data, "bezirksgrenzen.shp")
 
 
 

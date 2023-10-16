@@ -6,7 +6,7 @@
 source("./src/00_config.R")
 source("./src/02_utils.R")
 
-list_of_files <- list.files(processed_data_1_path)
+list_of_files <- list.files(path_processed_data_1)
 
 # Create empty data.table
 dt_plot <- data.table(
@@ -26,7 +26,7 @@ dt_table <- data.table(
 list_of_dt <- create_overview(list = list_of_files, 
 													   dt_plot = dt_plot, 
 													   dt_table = dt_table,
-														 input_path = processed_data_1_path)
+														 input_path = path_processed_data_1)
 
 dt_plot <- list_of_dt$dt_plot
 
@@ -42,12 +42,12 @@ dt_table <- list_of_dt$dt_table
 # 	scale_y_discrete(limits = c("VOI", "BOLT", "TIER")) +
 # 	labs(x = "date", y = "provider") 
 # 
-# ggsave(dt_plot_path, plot = overview_data, 
+# ggsave(path_dt_plot, plot = overview_data, 
 # 			 width = 30, height = 20, units = "cm")
 
 
 # Save data --------------------------------------
-write_rds(x = dt_table, file = dt_table_path)
+write_rds(x = dt_table, file = path_dt_table)
 
 
 

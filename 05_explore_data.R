@@ -7,7 +7,7 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/05_utils.R")
 
-dt <- read_rds(dt_path)
+dt <- read_rds(path_dt)
 summary(dt)
 
 
@@ -41,7 +41,7 @@ dt <- dt %>%
 
 
 
-list.dirs(processed_data_4_path)
+list.dirs(path_processed_data_4)
 
 ################################################################################
 # Trying to detect maintenance- /charging- / relocation-trips
@@ -145,7 +145,7 @@ ggplot_line_date_wd <- create_date_and_wd_plot(dt = dt_trips_per_date_wd)
 # 											coords = c("start_loc_lon", "start_loc_lat"),
 # 											crs = 4326)
 # 
-# shp_berlin <- st_read(shp_file_berlin_path)
+# shp_berlin <- st_read(path_shp_file_berlin)
 # 
 # sf_points_to_district <- st_join(sf_points, shp_berlin)
 # 

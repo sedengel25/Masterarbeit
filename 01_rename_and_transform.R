@@ -6,12 +6,12 @@
 source("./src/00_config.R")
 source("./src/01_utils.R")
 
-list_of_files <- list.files(raw_data_path)
+list_of_files <- list.files(path_raw_data)
 
 
 transform_to_rds(list = list_of_files, 
-								 input_path = raw_data_path,
-								 output_path = processed_data_1_path)
+								 input_path = path_raw_data,
+								 output_path = path_processed_data_1)
 
 
 
