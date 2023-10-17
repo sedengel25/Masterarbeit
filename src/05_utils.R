@@ -371,6 +371,21 @@ create_dbscan_clustered_dt <- function(dt, dt_norm, eps, minpts) {
 	return(dt_rev)
 }
 
+# Documentation: create_gmm_clustered_dt
+# Usage: create_gmm_clustered_dt(dt)
+# Description: Runs dbcsan on norm. data, adds cluster to org. data
+# Args/Options: dt
+# Returns: datatable
+# Output: ...
+create_gmm_clustered_dt <- function(dt) {
+	dt_norm <- normalize_dt(dt = dt)
+	gmm <- Mclust(data = dt_norm)
+	dt_c <- dt %>%
+		mutate(cluster = gmm$classification)
+	
+	return(dt_c)
+}
+
 
 # Documentation: create_3d_cluster_plot
 # Usage: create_3d_cluster_plot(dt)
@@ -381,16 +396,16 @@ create_dbscan_clustered_dt <- function(dt, dt_norm, eps, minpts) {
 create_3d_cluster_plot <- function(dt) {
   plot <- plot_ly(data = dt) %>%
   	add_markers(
-  		x = ~start_hour,
+  		x = ~duration,
   		y = ~dest_hour,
-  		#z = ~start_hour,
+  		z = ~charge,
   		color = ~cluster,
   		#colors = colorRampPalette(c("red", "green", "blue"))(3), # example color palette
   		marker = list(size = 10, opacity = 0.8)
   	) %>%
-  	layout(scene = list(xaxis = list(title = "Distance"),
-  											yaxis = list(title = "Duration"),
-  											zaxis = list(title = "Start Hour")))
+  	layout(scene = list(xaxis = list(title = "Duration"),
+  											yaxis = list(title = "Dest Hour"),
+  											zaxis = list(title = "Charge")))
   
   return(plot)
 }
@@ -434,3 +449,34 @@ create_duration_line_plot <- function(dt) {
   	labs(y = "Duration (in blue)", title = "Duration over Time") +
   	theme_minimal()
 }
+
+
+# Documentation: create_hist_grid
+# Usage: create_hist_grid(dt)
+# Description: Creates a grid of histograms for each variable & cluster
+# Args/Options: dt
+# Returns: ggplot
+# Output: ...
+create_hist_grid <- function(dt) {
+	dt <- dt %>%
+		mutate(cluster = as.factor(cluster))
+	
+	
+	tibble_dt <- dt %>% 
+		pivot_longer(cols = -cluster, names_to = "variable", values_to = "value")
+	
+	# Now, we create the plot using facet_grid
+	plot <- ggplot(tibble_dt, aes(x = value)) +
+		geom_histogram(bins = 30, fill = "blue", color = "black") + # customize as needed
+		facet_grid(cluster ~ variable, scales = "free") +
+		theme_light() +
+		labs(title = "Distribution of variables across clusters", 
+				 x = "Value", 
+				 y = "Count")
+	
+
+	
+	return(plot)
+}
+
+

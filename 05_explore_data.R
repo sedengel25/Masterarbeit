@@ -7,78 +7,121 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/05_utils.R")
 
-dt <- read_rds(path_dt)
-summary(dt)
+dt <- read_rds(path_dt_charge)
 
+min_date <- min(dt$start_time)
 
-################################################################################
-# Testing
-################################################################################
-dt <- dt %>%
-	mutate(year = year(start_time),
-				 month = month(start_time),
-				 day = day(start_time),
-				 hour = hour(start_time),
-				 min = minute(start_time),
-				 sec = second(start_time)) %>%
-	mutate(scooter_id = id,
-				 id = paste0(id,
-				 						"_",
-				 						year,
-				 						"_",
-				 						month,
-				 						"_",
-				 						day,
-				 						"_",
-				 						hour,
-				 						"_",
-				 						min,
-				 						"_",
-				 						sec)) %>%
-	select(-all_of(
-		c("year","month","day","hour","min","sec")
-	))
-
-
-
-list.dirs(path_processed_data_4)
-
-################################################################################
+###############################################################################
 # Trying to detect maintenance- /charging- / relocation-trips
 ################################################################################
-
-dt <- dt %>%
-	filter(duration <= 1440, 
-				 distance <= 5000,
-				 duration >100)
-
-
-
 dt <- dt %>%
 	mutate(weekday = wday(start_time, week_start = 1),
 				 start_hour = hour(start_time),
 				 dest_hour = hour(dest_time),
-				 date = as.Date(start_time)) %>%
-	select(c("start_hour", "duration", "dest_hour"))
+				 date = as.Date(start_time),
+				 day = as.integer(difftime(start_time, min_date, units = "days")) + 1) %>%
+	select(id, ride, day, start_hour, dest_hour, duration, distance, charge) %>%
+	filter(charge>-1
+				 # , duration <= 1440
+				 # , distance <= 10000
+				 )
 
-dt_norm <- normalize_dt(dt = dt)
+# Add 'dist_on_charge'
+dt <- dt %>% 
+	mutate(dist_on_charge = (charge/100)*34000) 
+
+
+# Flag trips where scooter has higher charge than same scooter trip before
+dt <- dt %>%
+	arrange(id, ride) %>%
+	mutate(charge_increase = ifelse(id != lag(id),
+																	NA,
+																	charge > lag(charge)
+	)) 
+
+
+# Move that column by 1
+dt <- dt %>%
+	mutate(charge_increase = lead(charge_increase))
+
+# Flag NAs as non-charging trips (FALSE)
+dt <- dt %>%
+	mutate(charge_increase = ifelse(is.na(charge_increase),
+																	FALSE,
+																	charge_increase))
+
+# Flag trips where the trip-distance is higher than the distance on charge
+dt <- dt %>%
+	mutate(charge_increase = if_else(distance > dist_on_charge, 
+																	 TRUE,
+																	 charge_increase
+																	 	))
+
 
 
 # GMM --------------------------------------
-gmm <- Mclust(data = dt_norm[,c(1,2)], G = 4)
-dt_c <- dt %>%
-	mutate(cluster = gmm$classification)
+dt_gmm <- dt %>%
+	filter(charge_increase!=TRUE) %>%
+	select(day, start_hour, dest_hour, duration, distance, charge) 
 
+
+dt_gmm_norm <- normalize_dt(dt = dt_gmm)
+
+
+gmm <- Mclust(data = dt_gmm_norm)
+
+dt_c <- dt_gmm %>%
+	mutate(cluster = gmm$classification)
 
 
 plot <- create_3d_cluster_plot(dt = dt_c)
 plot
+create_summary_for_clusters(dt = dt_c)
+create_hist_grid(dt = dt_c)
 
-dt_test <- dt_c %>%
-	filter(cluster %in% c(2,3,4)) 
+test_gmm <- dt_c %>%
+	filter(cluster==2) %>%
+	select(-all_of("cluster"))
 
-dt_test$dest_hour %>% hist()
 
+
+create_summary_for_clusters(dt = test_c)
+create_hist_grid(dt = test_c)
+
+test_c <- test_c %>%
+	mutate(cluster = as.integer(cluster))
+
+test_gmm_2 <- test_c %>%
+	filter(cluster!=4)
+
+test_2_c <- create_gmm_clustered_dt(dt = test_gmm_2)
+create_hist_grid(dt = test_2_c)
+create_summary_for_clusters(dt = test_2_c)
+
+test_gmm_3 <-  test_2_c %>%
+	filter(cluster!=5)
+test_3_c <- create_gmm_clustered_dt(dt = test_gmm_3)
+create_hist_grid(dt = test_3_c)
+create_summary_for_clusters(dt = test_3_c)
+
+test_3_c %>%
+	filter(cluster==6)
+
+dt %>%
+	filter(distance==15525.5000)
+
+dt %>%
+	filter(id==577869) %>%
+	arrange(ride)
+
+
+# Long distances?
+dt %>%
+	filter(distance==15525.5000)
+
+dt %>%
+	arrange(desc(distance)) %>%
+	head(100)
 
 
 ################################################################################
@@ -114,33 +157,6 @@ ggplot_line_date_wd <- create_date_and_wd_plot(dt = dt_trips_per_date_wd)
 #############################################################################
 # Ablage
 ################################################################################
-# dt_dbscan_pca <- prcomp(dt_dbscan)
-# num_lambda <- dt_dbscan_pca$sdev^2
-# cumsum(num_lambda)/sum(num_lambda)
-# 
-# 
-# dt_dbscan_pca <- dt_dbscan_pca$x %>%
-# 	as.data.table %>%
-# 	select("PC1","PC2")
-# int_min_pts <- 4
-
-
-# dt_dates <- seq(from = as.Date(posixct_min_start_time), 
-# 		to = as.Date(posixct_max_start_time), by = "1 day") %>%
-# 	as.data.table() %>%
-# 	rename("date" = ".")
-# 	
-# 
-# left_join(dt_trips_per_day, dt_dates, by = "date")
-# head(dt)
-# 
-# dt_temp = dt%>%
-# 	filter(duration < 30)
-# 
-# ggplot(dt_temp)+
-# 	geom_density(aes(x=duration))
-
- 
 # sf_points <- st_as_sf(dt_most_trips,
 # 											coords = c("start_loc_lon", "start_loc_lat"),
 # 											crs = 4326)
