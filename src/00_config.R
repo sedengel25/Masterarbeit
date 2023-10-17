@@ -25,6 +25,9 @@ library(sf)
 library(rlang)
 library(jsonlite)
 library(R.utils)
+library(feather)
+library(stringi)
+library(tidyverse)
 
 ################################################################################
 # Paths
@@ -49,6 +52,7 @@ path_external_data <- here("data/external")
 path_dt_table <- here(path_processed_data_2, "dt_table.rds")
 path_dt_plot <- here(path_processed_data_2, "dt_plot.png")
 path_dt <- here(path_processed_data_3,"dt.rds")
+path_dt_charge <- here(path_processed_data_4,"dt_charge.rds")
 
 
 

@@ -11,45 +11,23 @@ source("./src/04_utils.R")
 # Reads processed data
 dt <- read_rds(path_dt)
 
-
-# List all files of the raw data containing battery information
-dirs <- get_directories(path = path_bolt_berlin_raw)
+create_feather_files(input_path = path_)
 
 
-dt_battery <- data.table(
-	id = character(0),
-	lat = numeric(0),
-	lng = numeric(0),
-	charge = integer(0),
-	distance_on_charge = integer(0),
-	scooter_id = integer(0)
-)
+# List raw files
+list_raw_feather_files <- list.files(path = path_bolt_berlin_processed, 
+																		 full.names = TRUE)
+
+# Sort files
+list_raw_feather_files <- sort_files_datetime_asc(list = list_raw_feather_files)
+
+# Read in feather files
+feather_data <- lapply(list_raw_feather_files, read_feather)
+
+# Add column 'charge'
+dt <- dt %>%
+	mutate(charge = -1)
 
 
 
-# Create rds-files containing information regarding battery-status
-lapply(dirs[1], function(x){
-	
-	files <- list.files(x, full.names = TRUE)
-	print(x)
-		
-		lapply(files, function(y){
-			
-		file_js <- sub(".gz$", "", y)
-		file_gz <- y
-		unzip_gz(file_js = file_js, file_gz = file_gz)
-		dt_js <- fromJSON(file_js)
-		dt_js <- select_scooter_trips(dt = dt_js)
-		timestamp <- strsplit(y,split="\\.")[[1]][1]
-		timestamp <- strsplit(timestamp,split="/")[[1]]
-		length_of_split <- length(timestamp)
-		timestamp <- timestamp[length_of_split]
-		print(timestamp)
-		dt_js <- add_scooter_time_id(dt = dt_js, timestamp = timestamp)
-		dt_js <- dt_js %>%
-			select(id, lat, lng, charge, distance_on_charge, scooter_id)
-		filename <- here(path_bolt_berlin_processed, timestamp)
-		write_rds(dt_js, filename)
-		
-	})
-})
+
