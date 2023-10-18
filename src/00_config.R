@@ -16,7 +16,7 @@ library(lubridate)
 library(cluster)
 library(factoextra)
 library(scales)
-library(clusterCrit)
+#library(clusterCrit)
 library(plotly)
 library(ggdendro)
 library(mclust)
@@ -27,8 +27,7 @@ library(jsonlite)
 library(R.utils)
 library(feather)
 library(stringi)
-library(tidyverse)
-
+library(VennDiagram)
 ################################################################################
 # Paths
 ################################################################################

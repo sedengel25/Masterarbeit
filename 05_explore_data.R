@@ -11,6 +11,12 @@ dt <- read_rds(path_dt_charge)
 
 min_date <- min(dt$start_time)
 
+dt %>%
+	arrange(desc(distance)) %>%
+	head(25)
+
+# Relocating Potsdam?
+
 ###############################################################################
 # Trying to detect maintenance- /charging- / relocation-trips
 ################################################################################
@@ -26,9 +32,24 @@ dt <- dt %>%
 				 # , distance <= 10000
 				 )
 
+# Add 'last_trip'
+dt <- dt %>%
+	arrange(id, ride) %>%
+	mutate(last_trip = if_else(id != lag(id),
+														 TRUE,
+														 FALSE)) %>%
+	mutate(last_trip = if_else(is.na(last_trip),
+														 FALSE,
+														 last_trip))
+
+
+
 # Add 'dist_on_charge'
 dt <- dt %>% 
 	mutate(dist_on_charge = (charge/100)*34000) 
+
+
+
 
 
 # Flag trips where scooter has higher charge than same scooter trip before
@@ -50,6 +71,53 @@ dt <- dt %>%
 																	FALSE,
 																	charge_increase))
 
+
+
+dt %>%
+	filter(charge_increase==TRUE) %>%
+	nrow()
+
+dt %>%
+	filter(charge_increase==TRUE) %>%
+	filter(distance > dist_on_charge) %>%
+	nrow()
+
+dt %>%
+	filter(charge_increase==TRUE) %>%
+	filter(distance <= dist_on_charge) %>%
+	nrow()
+
+dt %>%
+	filter(charge_increase==TRUE) %>%
+	filter(distance > dist_on_charge) %>%
+	filter()
+
+
+dt %>%
+	filter(charge_increase==FALSE) %>%
+	nrow()
+
+dt %>%
+	filter(charge_increase==FALSE) %>%
+	filter(distance > dist_on_charge) %>%
+	nrow()
+
+###############################################################################
+# VENN - Beginn
+################################################################################
+dt_venn <- dt %>%
+	mutate(dist_greater_charge = if_else(distance > dist_on_charge,
+																			 TRUE,
+																			 FALSE)) %>%
+	select(dist_greater_charge, charge_increase, last_trip)
+
+ggvenn(dt_venn, colnames(dt_venn))
+
+###############################################################################
+# VENN - Ende
+################################################################################
+
+
 # Flag trips where the trip-distance is higher than the distance on charge
 dt <- dt %>%
 	mutate(charge_increase = if_else(distance > dist_on_charge, 
@@ -57,71 +125,82 @@ dt <- dt %>%
 																	 charge_increase
 																	 	))
 
+# Let's have a closer look at them: Relocating?
+# Maybe the ones with low charge are both charge and relocating
+# and the ones with high charge only relocating?
+
+dt %>%
+	arrange(desc(distance))
 
 
+
+
+
+
+
+check_subsequent_trips <- function(dt1, dt2) {
+  targets <- dt1 %>%
+  	transmute(  # create a new dataframe with the same number of rows
+  		id,  # keep the 'id' column as is
+  		next_ride = ride + 1  # create 'next_ride', which is 'ride' + 1
+  	)
+  
+  
+  # Step 2: Extract the subsequent rides from dt2
+  subsequent_rides <- dt %>%
+  	semi_join(targets, by = c("id" = "id", "ride" = "next_ride"))  # join by 'id' and 'next_ride'
+  
+  # Step 3: Combine the data from dt1 and the extracted rides. 
+  # We want them to be one after another, so we'll use bind_rows and arrange.
+  combined_data <- dt_id_ride %>%
+  	bind_rows(subsequent_rides) %>%  # bind the rows from dt1 and the subsequent rides
+  	arrange(id, ride)  # arrange by 'id' first and 'ride' second to get the desired order
+  
+  combined_data
+}
 # GMM --------------------------------------
 dt_gmm <- dt %>%
+	filter(charge_increase!=TRUE) %>%
+	select(day, start_hour, dest_hour, duration, distance, charge, last_trip) 
+
+dt_gmm_c <- dt %>%
 	filter(charge_increase!=TRUE) %>%
 	select(day, start_hour, dest_hour, duration, distance, charge) 
 
 
-dt_gmm_norm <- normalize_dt(dt = dt_gmm)
 
 
-gmm <- Mclust(data = dt_gmm_norm)
-
-dt_c <- dt_gmm %>%
-	mutate(cluster = gmm$classification)
-
+set.seed(123)
+dt_c <- create_gmm_clustered_dt(dt_cluster = dt_gmm_c, dt = dt_gmm)
+ 
 
 plot <- create_3d_cluster_plot(dt = dt_c)
 plot
 create_summary_for_clusters(dt = dt_c)
 create_hist_grid(dt = dt_c)
 
-test_gmm <- dt_c %>%
+# Cluster 1: 173550 trips with classic scooter trip duration and distance
+# Cluster 2: 10781 trips with long duration and a bit longer distance
+
+dt_gmm_2_c <- dt_c %>%
 	filter(cluster==2) %>%
-	select(-all_of("cluster"))
+	select(-all_of(c("cluster", "last_trip")))
 
+dt_gmm_2 <- dt_c %>%
+	filter(cluster==2) %>%
+	select(-all_of(c("cluster")))
 
+set.seed(123)
+dt_c_2 <- create_gmm_clustered_dt(dt_cluster = dt_gmm_2_c, dt = dt_gmm_2)
+table(dt_c_2$last_trip)
+create_summary_for_clusters(dt = dt_c_2)
+create_hist_grid(dt = dt_c_2)
+# Cluster 1: 1822 trips, very long dur, dest_hour 00:00, partly low charge
+# Cluster 2: 1067 trips, high charge
+# Cluster 3: 748 trips with long duration and partly low charge
+# Cluster 4: 
+# Cluster 5 & 6: 3431 + 1306 trips, actual 5km-trips
 
-create_summary_for_clusters(dt = test_c)
-create_hist_grid(dt = test_c)
-
-test_c <- test_c %>%
-	mutate(cluster = as.integer(cluster))
-
-test_gmm_2 <- test_c %>%
-	filter(cluster!=4)
-
-test_2_c <- create_gmm_clustered_dt(dt = test_gmm_2)
-create_hist_grid(dt = test_2_c)
-create_summary_for_clusters(dt = test_2_c)
-
-test_gmm_3 <-  test_2_c %>%
-	filter(cluster!=5)
-test_3_c <- create_gmm_clustered_dt(dt = test_gmm_3)
-create_hist_grid(dt = test_3_c)
-create_summary_for_clusters(dt = test_3_c)
-
-test_3_c %>%
-	filter(cluster==6)
-
-dt %>%
-	filter(distance==15525.5000)
-
-dt %>%
-	filter(id==577869) %>%
-	arrange(ride)
-
-
-# Long distances?
-dt %>%
-	filter(distance==15525.5000)
-
-dt %>%
-	arrange(desc(distance)) %>%
-	head(100)
 
 
 ################################################################################

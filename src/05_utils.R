@@ -377,8 +377,8 @@ create_dbscan_clustered_dt <- function(dt, dt_norm, eps, minpts) {
 # Args/Options: dt
 # Returns: datatable
 # Output: ...
-create_gmm_clustered_dt <- function(dt) {
-	dt_norm <- normalize_dt(dt = dt)
+create_gmm_clustered_dt <- function(dt_cluster, dt) {
+	dt_norm <- normalize_dt(dt = dt_cluster)
 	gmm <- Mclust(data = dt_norm)
 	dt_c <- dt %>%
 		mutate(cluster = gmm$classification)
