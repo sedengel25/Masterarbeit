@@ -377,8 +377,8 @@ create_dbscan_clustered_dt <- function(dt, dt_norm, eps, minpts) {
 # Args/Options: dt
 # Returns: datatable
 # Output: ...
-create_gmm_clustered_dt <- function(dt_cluster, dt) {
-	dt_norm <- normalize_dt(dt = dt_cluster)
+create_gmm_clustered_dt <- function(dt) {
+	dt_norm <- normalize_dt(dt = dt)
 	gmm <- Mclust(data = dt_norm)
 	dt_c <- dt %>%
 		mutate(cluster = gmm$classification)
@@ -451,13 +451,13 @@ create_duration_line_plot <- function(dt) {
 }
 
 
-# Documentation: create_hist_grid
-# Usage: create_hist_grid(dt)
+# Documentation: create_hist_grid_cluster
+# Usage: create_hist_grid_cluster(dt)
 # Description: Creates a grid of histograms for each variable & cluster
 # Args/Options: dt
 # Returns: ggplot
 # Output: ...
-create_hist_grid <- function(dt) {
+create_hist_grid_cluster <- function(dt) {
 	dt <- dt %>%
 		mutate(cluster = as.factor(cluster))
 	
@@ -477,6 +477,107 @@ create_hist_grid <- function(dt) {
 
 	
 	return(plot)
+}
+
+# Documentation: create_hist_grid_classes
+# Usage: create_hist_grid_classes(dt)
+# Description: Creates a grid of histograms for each variable & class
+# Args/Options: dt
+# Returns: ggplot
+# Output: ...
+create_hist_grid_classes <- function(dt) {
+	dt <- dt %>%
+		mutate(class = as.factor(class))
+	
+	
+	tibble_dt <- dt %>% 
+		pivot_longer(cols = -class, names_to = "variable", values_to = "value")
+	
+	# Now, we create the plot using facet_grid
+	plot <- ggplot(tibble_dt, aes(x = value)) +
+		geom_histogram(bins = 30, fill = "blue", color = "black") + # customize as needed
+		facet_grid(class ~ variable, scales = "free") +
+		theme_light() +
+		labs(title = "Distribution of variables across class", 
+				 x = "Value", 
+				 y = "Count")
+	
+	
+	
+	return(plot)
+}
+
+
+# Documentation: get_subsequent_trips
+# Usage: get_subsequent_trips(dt_subset, dt_compare)
+# Description: Takes id & ride of sub dt & looks for subsequent trips in big dt
+# Args/Options: dt_subset, dt_compare
+# Returns: datatable
+# Output: ...
+get_subsequent_trips <- function(dt_subset, dt_compare) {
+	list_of_rides <- list()
+	for(i in 1:nrow(dt_subset)){
+		id_i <- dt_subset[i, "id"] %>% as.character()
+		ride_i <- dt_subset[i, "ride"] %>% as.integer()
+		
+		dt_temp <- dt_compare %>%
+			filter(id==id_i) %>%
+			arrange(ride) %>%
+			mutate(lead_ride = lead(ride))
+
+		next_ride <- dt_temp %>%
+			filter(ride==ride_i) %>%
+			select(lead_ride) %>%
+			as.integer()
+		
+		row <- dt_temp %>%
+			filter(ride==next_ride)
+		
+		list_of_rides[[i]] <- row
+	}
+	dt_subset <- bind_rows(dt_subset, list_of_rides) %>%
+		arrange(id, ride)
+	return(dt_subset)
+}
+
+
+# Documentation: create_sf_start_dest_lines
+# Usage: create_sf_start_dest_lines(dt)
+# Description: Creates sf-lines for start-dest-coordiantes of given dt
+# Args/Options: dt
+# Returns: sf-lines
+# Output: ...
+create_sf_start_dest_lines <- function(dt) {
+	# Function to create a line from starting and destination coordinates
+	create_line <- function(lon1, lat1, lon2, lat2) {
+		st_linestring(rbind(c(lon1, lat1), c(lon2, lat2)))
+	}
+	
+	# Apply the function to each ride
+	lines <- mapply(create_line, 
+									dt$start_loc_lon, dt$start_loc_lat, 
+									dt$dest_loc_lon, dt$dest_loc_lat, 
+									SIMPLIFY = FALSE)
+	
+	# Create an 'sf' object with the lines
+	sf_lines <- st_sf(id = dt$id, geometry = st_sfc(lines, crs = 4326))
+	
+	return(sf_lines)
+}
+
+
+
+# Documentation: create_berlin_leaflet_map
+# Usage: create_berlin_leaflet_map(dt)
+# Description: Creates OSM-leaflet-map for Berlin
+# Args/Options: ...
+# Returns: leaflet
+# Output: ...
+create_berlin_leaflet_map <- function() {
+	m <- leaflet() %>%
+		setView(lng = 13.4050, lat = 52.5200, zoom = 10) %>%  # coordinates for Berlin
+		addTiles()  # Add default OpenStreetMap map tiles
+	return(m)
 }
 
 

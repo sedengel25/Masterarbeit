@@ -11,11 +11,6 @@ dt <- read_rds(path_dt_charge)
 
 min_date <- min(dt$start_time)
 
-dt %>%
-	arrange(desc(distance)) %>%
-	head(25)
-
-# Relocating Potsdam?
 
 ###############################################################################
 # Trying to detect maintenance- /charging- / relocation-trips
@@ -25,30 +20,28 @@ dt <- dt %>%
 				 start_hour = hour(start_time),
 				 dest_hour = hour(dest_time),
 				 date = as.Date(start_time),
-				 day = as.integer(difftime(start_time, min_date, units = "days")) + 1) %>%
-	select(id, ride, day, start_hour, dest_hour, duration, distance, charge) %>%
-	filter(charge>-1
-				 # , duration <= 1440
-				 # , distance <= 10000
-				 )
+				 day = as.integer(difftime(start_time, min_date, units = "days")) + 1)%>%
+	filter(charge>-1)
 
 # Add 'last_trip'
 dt <- dt %>%
 	arrange(id, ride) %>%
 	mutate(last_trip = if_else(id != lag(id),
 														 TRUE,
-														 FALSE)) %>%
+														 FALSE))
+
+
+
+# Move that column by 1
+dt <- dt %>%
+	mutate(last_trip = lead(last_trip)) %>%
 	mutate(last_trip = if_else(is.na(last_trip),
-														 FALSE,
+														 TRUE,
 														 last_trip))
-
-
 
 # Add 'dist_on_charge'
 dt <- dt %>% 
 	mutate(dist_on_charge = (charge/100)*34000) 
-
-
 
 
 
@@ -63,101 +56,112 @@ dt <- dt %>%
 
 # Move that column by 1
 dt <- dt %>%
-	mutate(charge_increase = lead(charge_increase))
-
-# Flag NAs as non-charging trips (FALSE)
-dt <- dt %>%
+	mutate(charge_increase = lead(charge_increase)) %>%
 	mutate(charge_increase = ifelse(is.na(charge_increase),
 																	FALSE,
 																	charge_increase))
 
-
-
-dt %>%
-	filter(charge_increase==TRUE) %>%
-	nrow()
-
-dt %>%
-	filter(charge_increase==TRUE) %>%
-	filter(distance > dist_on_charge) %>%
-	nrow()
-
-dt %>%
-	filter(charge_increase==TRUE) %>%
-	filter(distance <= dist_on_charge) %>%
-	nrow()
-
-dt %>%
-	filter(charge_increase==TRUE) %>%
-	filter(distance > dist_on_charge) %>%
-	filter()
-
-
-dt %>%
-	filter(charge_increase==FALSE) %>%
-	nrow()
-
-dt %>%
-	filter(charge_increase==FALSE) %>%
-	filter(distance > dist_on_charge) %>%
-	nrow()
-
 ###############################################################################
-# VENN - Beginn
+# Venn diagram
 ################################################################################
-dt_venn <- dt %>%
+dt <- dt %>%
 	mutate(dist_greater_charge = if_else(distance > dist_on_charge,
 																			 TRUE,
-																			 FALSE)) %>%
+																			 FALSE)) 
+
+
+dt_venn <- dt %>%
 	select(dist_greater_charge, charge_increase, last_trip)
 
 ggvenn(dt_venn, colnames(dt_venn))
 
+
+
+dt_categories <- dt %>%
+	mutate(
+		class = case_when(
+			charge_increase == FALSE &
+				dist_greater_charge == FALSE &
+				last_trip == FALSE ~ "normal_trip",
+			charge_increase == FALSE &
+				dist_greater_charge == FALSE & last_trip == TRUE ~ "last_trip",
+			charge_increase == FALSE &
+				dist_greater_charge == TRUE &
+				last_trip == FALSE ~ "distgreatercharge",
+			charge_increase == FALSE &
+				dist_greater_charge == TRUE &
+				last_trip == TRUE ~ "distgreatercharge_lasttrip",
+			charge_increase == TRUE &
+				dist_greater_charge == FALSE &
+				last_trip == FALSE ~ "chargeincrease",
+			charge_increase == TRUE &
+				dist_greater_charge == FALSE &
+				last_trip == TRUE ~ "chargeincrease_lasttrip",
+			charge_increase == TRUE &
+				dist_greater_charge == TRUE &
+				last_trip == FALSE ~ "chargeincrease_distgreatercharge",
+			charge_increase == TRUE &
+				dist_greater_charge == TRUE &
+				last_trip == TRUE ~ "chargeincrease_lasttrip_distgreatercharge",
+			TRUE ~ "Unknown"
+			
+		)
+	)
+
+
+
+dt_normal_trips <- dt_categories %>%
+	filter(class=="normal_trip") %>%
+	select(start_hour, distance, duration, day, charge)
+
+set.seed(123)
+dt_norm <- normalize_dt(dt = dt_normal_trips)
+gmm <- Mclust(data = dt_norm)
+dt_normal_trips_c <- dt_normal_trips %>%
+	mutate(cluster = gmm$classification)
+
+create_hist_grid_cluster(dt = dt_normal_trips_c)
+create_summary_for_clusters(dt = dt_normal_trips_c)
+
+dt_normal_trips_c_9 <- dt_normal_trips_c %>%
+	filter(cluster==9)
+
+dt_normal_trips_c_9
+# Create Binary-variable for high charge loss and no charge loss
+# Add do venn diagram
+
+
+dt_reloc <- dt %>%
+	filter(charge_increase==FALSE) %>%
+	filter(last_trip==FALSE) %>%
+	filter(distance > dist_on_charge) 
+
+dt_reloc <- get_subsequent_trips(dt_subset = dt_reloc,
+															 dt_compare = dt)
+
+
+
+dt_reloc <- dt_reloc %>%
+	mutate(charge_lead = lead(charge)) %>%
+	mutate(charge_loss = charge - charge_lead) %>%
+	filter(is.na(lead_ride)) %>%
+	filter(last_trip==FALSE) %>%
+	select(id, ride, start_loc_lat, start_loc_lon, dest_loc_lat, dest_loc_lon, 
+				 start_time, distance, dist_on_charge, duration, charge, charge_lead, charge_loss)
+
+dt_reloc 
+
 ###############################################################################
-# VENN - Ende
+# Spatial
 ################################################################################
+sf_lines <- create_sf_start_dest_lines(dt = dt_reloc)
+
+leaflet_map <- create_berlin_leaflet_map()
+
+leaflet_trips <- leaflet_map %>% addPolylines(data = sf_lines)
+leaflet_trips
 
 
-# Flag trips where the trip-distance is higher than the distance on charge
-dt <- dt %>%
-	mutate(charge_increase = if_else(distance > dist_on_charge, 
-																	 TRUE,
-																	 charge_increase
-																	 	))
-
-# Let's have a closer look at them: Relocating?
-# Maybe the ones with low charge are both charge and relocating
-# and the ones with high charge only relocating?
-
-dt %>%
-	arrange(desc(distance))
-
-
-
-
-
-
-
-check_subsequent_trips <- function(dt1, dt2) {
-  targets <- dt1 %>%
-  	transmute(  # create a new dataframe with the same number of rows
-  		id,  # keep the 'id' column as is
-  		next_ride = ride + 1  # create 'next_ride', which is 'ride' + 1
-  	)
-  
-  
-  # Step 2: Extract the subsequent rides from dt2
-  subsequent_rides <- dt %>%
-  	semi_join(targets, by = c("id" = "id", "ride" = "next_ride"))  # join by 'id' and 'next_ride'
-  
-  # Step 3: Combine the data from dt1 and the extracted rides. 
-  # We want them to be one after another, so we'll use bind_rows and arrange.
-  combined_data <- dt_id_ride %>%
-  	bind_rows(subsequent_rides) %>%  # bind the rows from dt1 and the subsequent rides
-  	arrange(id, ride)  # arrange by 'id' first and 'ride' second to get the desired order
-  
-  combined_data
-}
 # GMM --------------------------------------
 dt_gmm <- dt %>%
 	filter(charge_increase!=TRUE) %>%

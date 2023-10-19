@@ -27,7 +27,8 @@ library(jsonlite)
 library(R.utils)
 library(feather)
 library(stringi)
-library(VennDiagram)
+library(ggvenn)
+library(tidyr)
 ################################################################################
 # Paths
 ################################################################################
