@@ -16,7 +16,7 @@ combine_files_to_dt <- function(list, path){
 		
 		provider <- strsplit(x, split = "_")[[1]][1]
 		city <- strsplit(x, split = "_")[[1]][2]
-		dt <- paste0(path,x) %>% read_rds()
+		dt <- here(path, x) %>% read_rds()
 		dt %>% 
 			mutate(id = as.character(id), 
 						 provider = provider,

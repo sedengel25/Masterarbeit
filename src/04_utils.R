@@ -105,11 +105,13 @@ create_feather_files <- function(input_path, output_path){
 	# List all directories of the raw data containing battery information
 	dirs <- get_directories(path = input_path)
 	
+	# pb <- txtProgressBar(min = 1, max = length(dirs), style = 3)
+	
 	lapply(dirs, function(x){
 		
 		# List all files owithin these directories
 		files <- list.files(x, pattern = "\\.gz$", full.names = TRUE)
-		
+		# setTxtProgressBar(pb, x)
 		
 		lapply(files, function(y){
 			

@@ -22,7 +22,7 @@ list_of_ids <- choose_datasets(dt = dt_table,
 															 city = "BERLIN")
 
 
-dt <- combine_files_to_dt(list = list_of_files[list_of_ids[1]], 
+dt <- combine_files_to_dt(list = list_of_files[list_of_ids[2]], 
 													path = path_processed_data_1) 
 
 
@@ -30,5 +30,5 @@ dt <- combine_files_to_dt(list = list_of_files[list_of_ids[1]],
 ################################################################################
 # Save data
 ################################################################################
-write_rds(x = dt, file = path_dt)
+write_rds(x = dt, file = path_dt_bolt_berlin_06_05)
 
