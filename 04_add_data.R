@@ -9,10 +9,10 @@ source("./src/04_utils.R")
 
 
 # Reads processed data
-dt <- read_rds(path_dt_bolt_berlin_06_05)
+dt <- read_rds(path_dt_tier_berlin_05_12)
 
-create_feather_files(input_path = path_raw_bolt_berlin_06_05, 
-										 output_path = path_processed_bolt_berlin_06_05)
+create_feather_files_tier(input_path = path_raw_tier_berlin_05_12, 
+										 output_path = path_processed_tier_berlin_05_12)
 
 
 # List raw files
