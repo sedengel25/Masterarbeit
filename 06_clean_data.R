@@ -5,9 +5,9 @@
 ################################################################################
 source("./src/00_config.R")
 source("./src/00_utils.R")
-source("./src/05_utils.R")
+source("./src/06_utils.R")
 
-dt <- read_rds(path_dt_charge)
+dt <- read_rds(path_dt_charge_bolt_berlin_05_12)
 
 min_date <- min(dt$start_time)
 
@@ -61,14 +61,13 @@ dt <- dt %>%
 																	FALSE,
 																	charge_increase))
 
-###############################################################################
-# Venn diagram
-################################################################################
+# Add 'dist_greater_charge'
 dt <- dt %>%
 	mutate(dist_greater_charge = if_else(distance > dist_on_charge,
 																			 TRUE,
 																			 FALSE)) 
 
+# Venn diagram
 
 dt_venn <- dt %>%
 	select(dist_greater_charge, charge_increase, last_trip)
@@ -111,99 +110,43 @@ dt_categories <- dt %>%
 
 
 dt_normal_trips <- dt_categories %>%
-	filter(class=="normal_trip") %>%
-	select(start_hour, distance, duration, day, charge)
+	filter(class == "normal_trip") %>%
+	select(
+		id,
+		ride,
+		start_loc_lat,
+		start_loc_lon,
+		dest_loc_lat,
+		dest_loc_lon,
+		start_time,
+		start_hour,
+		distance,
+		duration,
+		day,
+		charge
+	)
 
+# Cluster 'dt_normal_trips"
 set.seed(123)
-dt_norm <- normalize_dt(dt = dt_normal_trips)
-gmm <- Mclust(data = dt_norm)
-dt_normal_trips_c <- dt_normal_trips %>%
-	mutate(cluster = gmm$classification)
 
-create_hist_grid_cluster(dt = dt_normal_trips_c)
-create_summary_for_clusters(dt = dt_normal_trips_c)
+# Remove unexplainable Cluster from data
 
-dt_normal_trips_c_9 <- dt_normal_trips_c %>%
-	filter(cluster==9)
-
-dt_normal_trips_c_9
-# Create Binary-variable for high charge loss and no charge loss
-# Add do venn diagram
-
-
-dt_reloc <- dt %>%
-	filter(charge_increase==FALSE) %>%
-	filter(last_trip==FALSE) %>%
-	filter(distance > dist_on_charge) 
-
-dt_reloc <- get_subsequent_trips(dt_subset = dt_reloc,
-															 dt_compare = dt)
-
-
-
-dt_reloc <- dt_reloc %>%
-	mutate(charge_lead = lead(charge)) %>%
-	mutate(charge_loss = charge - charge_lead) %>%
-	filter(is.na(lead_ride)) %>%
-	filter(last_trip==FALSE) %>%
-	select(id, ride, start_loc_lat, start_loc_lon, dest_loc_lat, dest_loc_lon, 
-				 start_time, distance, dist_on_charge, duration, charge, charge_lead, charge_loss)
-
-dt_reloc 
+# Write remaining data to rds-file
 
 ###############################################################################
 # Spatial
 ################################################################################
-sf_lines <- create_sf_start_dest_lines(dt = dt_reloc)
-
-leaflet_map <- create_berlin_leaflet_map()
-
-leaflet_trips <- leaflet_map %>% addPolylines(data = sf_lines)
-leaflet_trips
-
-
-# GMM --------------------------------------
-dt_gmm <- dt %>%
-	filter(charge_increase!=TRUE) %>%
-	select(day, start_hour, dest_hour, duration, distance, charge, last_trip) 
-
-dt_gmm_c <- dt %>%
-	filter(charge_increase!=TRUE) %>%
-	select(day, start_hour, dest_hour, duration, distance, charge) 
+# sf_lines <- create_sf_start_dest_lines(dt = dt_reloc)
+# 
+# leaflet_map <- create_berlin_leaflet_map()
+# 
+# leaflet_trips <- leaflet_map %>% addPolylines(data = sf_lines)
+# leaflet_trips
 
 
 
 
-set.seed(123)
-dt_c <- create_gmm_clustered_dt(dt_cluster = dt_gmm_c, dt = dt_gmm)
- 
 
-plot <- create_3d_cluster_plot(dt = dt_c)
-plot
-create_summary_for_clusters(dt = dt_c)
-create_hist_grid(dt = dt_c)
-
-# Cluster 1: 173550 trips with classic scooter trip duration and distance
-# Cluster 2: 10781 trips with long duration and a bit longer distance
-
-dt_gmm_2_c <- dt_c %>%
-	filter(cluster==2) %>%
-	select(-all_of(c("cluster", "last_trip")))
-
-dt_gmm_2 <- dt_c %>%
-	filter(cluster==2) %>%
-	select(-all_of(c("cluster")))
-
-set.seed(123)
-dt_c_2 <- create_gmm_clustered_dt(dt_cluster = dt_gmm_2_c, dt = dt_gmm_2)
-table(dt_c_2$last_trip)
-create_summary_for_clusters(dt = dt_c_2)
-create_hist_grid(dt = dt_c_2)
-# Cluster 1: 1822 trips, very long dur, dest_hour 00:00, partly low charge
-# Cluster 2: 1067 trips, high charge
-# Cluster 3: 748 trips with long duration and partly low charge
-# Cluster 4: 
-# Cluster 5 & 6: 3431 + 1306 trips, actual 5km-trips
 
 
 

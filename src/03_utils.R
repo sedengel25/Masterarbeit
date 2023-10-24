@@ -1,7 +1,7 @@
 ################################################################################
 # Big Data Analytics in Transportation (TU Dresden)
 # Master Thesis
-# This file contains all functions to execute 03_read_data.R
+# This file contains all functions to execute 03_read_csv_write_rds.R
 ################################################################################
 
 # Documentation: combine_files_to_dt
