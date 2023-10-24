@@ -222,13 +222,14 @@ sort_files_datetime_asc <- function(list) {
 }
 
 
-# Documentation: add_charge_col
-# Usage: add_charge_col(dt)
-# Description: Sorts raw data by ascending request-datetime
+# Documentation: add_charge_col_bolt
+# Usage: add_charge_col_bolt(dt)
+# Description: Adds charge-col of BOLT raw data
 # Args/Options: list
-# Returns: list
+# Returns: ...
 # Output: ...
-add_charge_col <- function(dt){
+# Action: Adds column
+add_charge_col_bolt <- function(dt, path){
 	
 	pb <- txtProgressBar(min = 0, max = 100, style = 3)
 	
@@ -237,10 +238,45 @@ add_charge_col <- function(dt){
 		
 		id_i <- dt[i, "id"] %>% as.integer
 		timestamp <- dt[i, "timestamp"]
-		filename <- here(path_bolt_berlin_processed, timestamp)
+		filename <- here(path, timestamp)
 		fileending <- ".feather"
-		path <- paste0(filename, fileending)
-		feather_idx <- match(path, list_raw_feather_files) - 1
+		path_feather <- paste0(filename, fileending)
+		feather_idx <- match(path_feather, list_raw_feather_files) - 1
+		if(is.na(feather_idx)){
+			next
+		}
+		data <- feather_data[[feather_idx]] 
+		charge <- data %>%
+			filter(id == id_i) %>%
+			select(charge) %>%
+			as.integer()
+		dt[i, "charge"] <- charge
+	}
+}
+
+
+
+
+# Documentation: add_charge_col_tier
+# Usage: add_charge_col_tier(dt)
+# Description: Adds charge-col of TIER raw data
+# Args/Options: dt
+# Returns: ...
+# Output: ...
+# Action: Adds column
+add_charge_col_tier <- function(dt, path){
+	
+	pb <- txtProgressBar(min = 0, max = 100, style = 3)
+	
+	for(i in 1:nrow(dt)){
+		setTxtProgressBar(pb, i)
+		
+		id_i <- dt[i, "id"] %>% as.integer
+		timestamp <- dt[i, "timestamp"]
+		filename <- here(path, timestamp)
+		fileending <- ".feather"
+		path_feather <- paste0(filename, fileending)
+		feather_idx <- match(path_feather, list_raw_feather_files) - 1
 		if(is.na(feather_idx)){
 			next
 		}
