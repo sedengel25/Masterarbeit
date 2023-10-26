@@ -12,16 +12,16 @@ source("./src/05_utils.R")
 dt <- read_rds(path_dt_tier_berlin_05_12)
 
 # List raw files
-# list_feather_files <- list.files(path = path_feather_tier_berlin_05_12, 
-#																		 full.names = TRUE)
+list_feather_files <- list.files(path = path_feather_tier_berlin_05_12, 
+																		 full.names = TRUE)
 
 # Sort files
-# list_feather_files <- sort_files_datetime_asc(list = list_feather_files)
+list_feather_files <- sort_files_datetime_asc(list = list_feather_files)
 
 # Read in feather files
 # feather_data <- lapply(list_feather_files, read_feather)
 
-
+# feather_data <- read_rds("C:/r_projects/Masterarbeit/tier_feather_data.rds")
 
 
 # Add column 'charge'
@@ -35,6 +35,8 @@ dt <- add_timestamp(dt = dt)
 
 
 add_charge_col_tier(dt = dt, 
-										input_path = path_processed_tier_berlin_05_12,
+										input_path = path_feather_tier_berlin_05_12,
 										output_path = path_dt_charge_tier_berlin_05_12)
+
+
 

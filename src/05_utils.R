@@ -64,7 +64,7 @@ add_timestamp <- function(dt){
 # Args/Options: dt, input_path, output_path
 # Returns: dt
 # Output: ...
-add_charge_col_bolt <- function(dt, path){
+add_charge_col_bolt <- function(dt, input_path, output_path){
 	
 	pb <- txtProgressBar(min = 0, max = 100, style = 3)
 	
@@ -73,19 +73,27 @@ add_charge_col_bolt <- function(dt, path){
 		
 		id_i <- dt[i, "id"] %>% as.integer
 		timestamp <- dt[i, "timestamp"]
-		filename <- here(path, timestamp)
+		filename <- here(input_path, timestamp)
 		fileending <- ".feather"
 		path_feather <- paste0(filename, fileending)
-		feather_idx <- match(path_feather, list_raw_feather_files) - 1
+		feather_idx <- match(path_feather, list_feather_files) - 1
 		if(is.na(feather_idx)){
 			next
 		}
 		data <- feather_data[[feather_idx]] 
+		print(id_i)
+		print(feather_idx)
+		# print(data)
 		charge <- data %>%
 			filter(id == id_i) %>%
 			select(charge) %>%
 			pull() %>%
 			as.integer()
+		
+		if(length(charge)==0){
+			next
+		}
+		
 		dt[i, "charge"] <- charge
 
 	}
@@ -113,23 +121,34 @@ add_charge_col_tier <- function(dt, input_path, output_path){
 		filename <- here(input_path, timestamp)
 		fileending <- ".feather"
 		path_feather <- paste0(filename, fileending)
-		feather_idx <- match(path_feather, list_raw_feather_files) - 1
+		feather_idx <- match(path_feather, list_feather_files) - 1
 		if(is.na(feather_idx)){
 			next
 		}
 		data <- feather_data[[feather_idx]] 
 		data <- data %>% 
 			distinct(id, .keep_all = TRUE) 
+		print(id_i)
+		print(feather_idx)
+		# print(data)
 		charge <- data %>%
 			filter(id == id_i) %>%
 			select(batteryLevel) %>%
-			pull() %>%
+			# pull() %>%
 			as.integer()
 		dist_on_charge <- data %>%
 			filter(id == id_i) %>%
 			select(currentRangeMeters) %>%
 			pull() %>%
 			as.integer()
+		
+		if(length(charge)==0){
+			next
+		}
+		
+		if(length(dist_on_charge)==0){
+			next
+		}
 		
 		dt[i, "charge"] <- charge
 		dt[i, "dist_on_charge"] <- dist_on_charge

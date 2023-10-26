@@ -11,7 +11,7 @@
 # Returns: datatable
 # Output: ...
 normalize_dt <- function(dt) {
-  dt_norm <- as.data.frame(lapply(dt, rescale))
+  dt_norm <- as.data.table(lapply(dt, rescale))
   
   return(dt_norm)
 }
@@ -581,3 +581,402 @@ create_berlin_leaflet_map <- function() {
 }
 
 
+# Documentation: create_plot_compare_charge_noncharge
+# Usage: create_plot_compare_charge_noncharge(dt_1, dt_2)
+# Description: Compares duration of trip and new charge status after trip
+# Args/Options: dt_1, dt_2
+# Returns: ggplot
+# Output: ...
+create_plot_compare_charge_noncharge <- function(dt_1, dt_2) {
+	p1.1 <- ggplot(dt_1) + 
+		geom_point(aes(x = charge_after, y = duration), color ="#E69F00")
+	
+	p1.2 <- ggplot(dt_2) + 
+		geom_point(aes(x = charge_after, y = duration), color ="#56B4E9")
+	
+	
+	p2.1 <- ggplot(dt_1) + 
+		geom_boxplot(aes(x = charge_after)) 
+	
+	p2.2 <- ggplot(dt_2) + 
+		geom_boxplot(aes(x = charge_after)) 
+	
+	p3.1 <- ggplot(dt_1) + 
+		geom_boxplot(aes(x = log(duration))) +
+		geom_text(aes(x = mean(log(duration)), 
+									y = 0.4,
+									label =round(mean(duration),2)),
+							color = "#E69F00")
+	
+	p3.2 <- ggplot(dt_2) + 
+		geom_boxplot(aes(x = log(duration))) +
+		geom_text(aes(x = mean(log(duration)), 
+									y = 0.4,
+									label =round(mean(duration),2)),
+							color = "#56B4E9")
+	
+	p4.1 <- ggplot(dt_1) + 
+		geom_bar(aes(x = weekday)) 
+	
+	p4.2 <- ggplot(dt_2) + 
+		geom_bar(aes(x = weekday)) 
+	
+	p5.1 <- ggplot(dt_1) + 
+		geom_bar(aes(x = dest_hour)) 
+	
+	p5.2 <- ggplot(dt_2) + 
+		geom_bar(aes(x = dest_hour)) 
+	
+	# Create an arrangement of plots (not yet drawing them)
+	# grid_arrangement <- arrangeGrob(p1.1, p1.2,
+	# 																p2.1, p2.2, 
+	# 																p3.1, p3.2, 
+	# 																p4.1, p4.2, 
+	# 																nrow = 2)
+	# 
+	# # Create titles as grobs (graphic objects)
+	# title_grob_1 <-
+	# 	textGrob("Charging trips", gp = gpar(fontsize = 14, fontface = "bold"))
+	# title_grob_2 <-
+	# 	textGrob("Non charging trips", gp = gpar(fontsize = 14, fontface = "bold"))
+	# 
+	# # Use the 'gtable' package functions to add the titles to the top of the layout
+	# grid_arrangement <-
+	# 	gtable::gtable_add_rows(grid_arrangement,
+	# 													heights = unit(1, "lines"),
+	# 													pos = 0)
+	# grid_arrangement <-
+	# 	gtable::gtable_add_grob(grid_arrangement,
+	# 													title_grob_1,
+	# 													t = 1,
+	# 													l = 1,
+	# 													r = 1) # Adjust 'l' and 'r' to position the title
+	# grid_arrangement <-
+	# 	gtable::gtable_add_grob(grid_arrangement,
+	# 													title_grob_2,
+	# 													t = 1,
+	# 													l = 2,
+	# 													r = 2) # Adjust 'l' and 'r' to position the title
+	
+	plot <- grid.arrange(p1.1, 
+							 p2.1, 
+							 p3.1, 
+							 p4.1,
+							 p5.1,
+							 textGrob("Charging trips", 
+							 				 gp = gpar(fontsize = 10, font = 3)),
+							 p1.2,
+							 p2.2,
+							 p3.2,
+							 p4.2,
+							 p5.2,
+							 textGrob("Non charging trips", 
+							 				 gp = gpar(fontsize = 10, font = 3)),
+							 nrow = 2
+							 )
+	
+	return(plot)
+}
+
+
+
+# Documentation: prepare_gmm
+# Usage: prepare_gmm(dt)
+# Description: Creates and selects columns for the gmm-clustering
+# Args/Options: dt
+# Returns: datatable
+# Output: ...
+prepare_gmm <- function(dt) {
+
+	dt <- dt %>%
+		mutate(
+			time_of_day = case_when(
+				dest_hour >= 0 & dest_hour < 7  ~ "night",
+				dest_hour >= 7 & dest_hour < 13 ~ "morning",
+				dest_hour >= 13 & dest_hour < 20 ~ "afternoon",
+				dest_hour >= 20 & dest_hour <= 23 ~ "evening",
+			)
+		) %>%
+		mutate(
+			part_of_week = case_when(
+				weekday >= 1 & weekday <= 5 ~ "working day",
+				weekday > 5 ~ "weekend"
+			)
+		) 
+		
+	dt <- dt %>%
+		mutate(
+			last_trip = factor(last_trip),
+			charge_increase = factor(charge_increase),
+			time_of_day = factor(time_of_day),
+			part_of_week = factor(part_of_week)
+		)
+	
+	print(dt)
+	factor_levels <- list(
+		last_trip = levels(dt$last_trip),
+		charge_increase = levels(dt$charge_increase),
+		time_of_day = levels(dt$time_of_day),
+		part_of_week = levels(dt$part_of_week)
+	)
+
+	print(factor_levels)
+	
+
+	dt <- dt %>%
+		mutate(
+			last_trip = as.integer(last_trip),
+			charge_increase = as.integer(charge_increase),
+			time_of_day = as.integer(time_of_day),
+			part_of_week = as.integer(part_of_week)
+		) %>%
+		select(distance, 
+					 duration, 
+					 charge, 
+					 charge_loss,
+					 last_trip, 
+					 charge_increase, 
+					 time_of_day,
+					 part_of_week)
+	
+	return(list("dt" = dt, "factor_levels" = factor_levels))
+	
+}
+
+
+
+# Documentation: convert_to_original_category
+# Usage: convert_to_original_category(integers, original_levels)
+# Description: Returns the original factor levels
+# Args/Options: integers, original_levels
+# Returns: vector of characters
+# Output: ...
+convert_to_original_category <- function(integers, original_levels) {
+	# Check if all integers are valid indices
+	if (all(integers %in% seq_along(original_levels))) {
+		return(original_levels[integers])
+	} else {
+		warning("Some integers do not correspond to factor levels.")
+		return(NA) # or handle this case as you need
+	}
+}
+
+
+# Documentation: create_plots
+# Usage: create_plots(dt_sub)
+# Description: Creates list of mixed ggplots 
+# Args/Options: dt_sub
+# Returns: list
+# Output: ...
+create_plots <- function(dt_sub) {
+	
+	ticks_time_of_day <- lapply(1:4,function(x){
+		convert_to_original_category(x, factor_levels$time_of_day)
+	}) %>% unlist
+	
+	i = 1
+	plots <- list()
+	variables <- unique(dt_sub$variable)
+	print(variables)
+		if("last_trip" %in% variables){
+			p_last_trip <- ggplot(dt_sub) +
+				geom_bar(
+					data = . %>% filter(variable == "last_trip"),
+					aes(x = factor(value, levels = c(1,2)), fill = as.factor(value))
+				) +
+				theme(legend.position = "none") +
+				scale_x_discrete(drop = FALSE) +
+				xlab("last_trip")
+			
+			plots[[i]] <- p_last_trip
+		i = i +1
+	}
+
+	if("time_of_day" %in% variables){
+		p_time_of_day <- ggplot(dt_sub) +
+			geom_bar(
+				data = . %>% filter(variable == "time_of_day"),
+				aes(x = factor(value, levels = c(1,2,3,4)), fill = as.factor(value))
+			) +
+			theme(legend.position = "none") +
+			scale_x_discrete(drop = FALSE,
+											 labels = ticks_time_of_day) +
+			xlab("time_of_day")
+		
+		plots[[i]] <- p_time_of_day
+	i = i +1
+	}
+
+	if("part_of_week" %in% variables){
+		p_part_of_week <- ggplot(dt_sub) +
+			geom_bar(
+				data = . %>% filter(variable == "part_of_week"),
+				aes(x = factor(value, levels = c(1,2)), fill = as.factor(value))
+			) +
+			theme(legend.position = "none") +
+			scale_x_discrete(drop = FALSE) +
+			xlab("part_of_week")
+		
+		plots[[i]] <- p_part_of_week
+		i = i +1
+	}
+	
+	if("charge_increase" %in% variables){
+		p_charge_increase <- ggplot(dt_sub) + 
+			geom_bar(
+				data = . %>% filter(variable == "charge_increase"), 
+				aes(x = factor(value, levels = c(1,2)), fill = as.factor(value))
+			) +
+			theme(legend.position = "none") + 
+			scale_x_discrete(drop = FALSE) +
+			xlab("charge_increase")
+		
+		plots[[i]] <- p_charge_increase
+		i = i +1
+	}
+	
+	if("distance" %in% variables){
+		p_distance <- ggplot(dt_sub %>% filter(variable == "distance")) + 
+			geom_boxplot(
+				aes(x = log(value))
+			) +
+			geom_text(aes(x = mean(log(value)), 
+										y = 0.5,
+										label =round(mean(value),2)),
+								color = "#D55E00") + 
+			scale_x_continuous(name = "distance", 
+												 limits = c(list_min_val$distance %>% log,
+												 					 list_max_val$distance %>% log))
+		
+		plots[[i]] <- p_distance
+		i = i +1
+	}
+
+	if("duration" %in% variables){
+		p_duration <- ggplot(dt_sub %>% filter(variable == "duration")) + 
+			geom_boxplot(
+				aes(x = log(value))
+			) +
+			geom_text(aes(x = mean(log(value)), 
+										y = 0.5,
+										label =round(mean(value),2)),
+								color = "#D55E00") + 
+			scale_x_continuous(name = "duration", 
+												 limits = c(list_min_val$duration %>% log,
+												 					 list_max_val$duration %>% log))
+		
+		plots[[i]] <- p_duration
+		i = i +1
+	}
+	
+	if("charge" %in% variables){
+		p_charge <- ggplot(dt_sub) + 
+			geom_density(
+				data = . %>% filter(variable == "charge"), 
+				aes(x = value)
+			) +
+			scale_x_continuous(name = "charge", 
+												 limits = c(list_min_val$charge %>% log,
+												 					 list_max_val$charge %>% log))
+		
+		plots[[i]] <- p_charge
+		i = i +1
+	}
+
+	if("charge_loss" %in% variables){
+		p_charge_loss <- ggplot(dt_sub) + 
+			geom_density(
+				data = . %>% filter(variable == "charge_loss"), 
+				aes(x = value)
+			) +
+			scale_x_continuous(name = "charge_loss", 
+												 limits = c(list_min_val$charge_loss,
+												 					  list_max_val$charge_loss))
+		
+		plots[[i]] <- p_charge_loss
+		i = i +1
+	}
+	return(plots)
+}
+
+
+
+
+# Documentation: create_mixed_grid_vars_over_cluster
+# Usage: create_mixed_grid_vars_over_cluster(dt_pivot_longer)
+# Description: Creates grid of mixed plots over different vars & clusters 
+# Args/Options: dt_pivot_longer
+# Returns: grid (gridExtra)
+# Output: ...
+create_mixed_grid_vars_over_cluster <- function(dt_pivot_longer) {
+	
+
+	int_n_col <- unique(dt_pivot_longer$variable) %>% length + 1
+  vector_numb_clusters <- unique(dt_pivot_longer$cluster)
+  numb_trips_cluster <- dt_pivot_longer %>%
+  	filter(variable==dt_pivot_longer[1,"variable"] %>% as.character) %>%
+  	select(cluster) %>%
+  	pull %>%
+  	table %>%
+  	as.numeric
+  
+  list_of_subsets <- lapply(vector_numb_clusters, function(x){
+  	dt_pivot_longer %>%
+  		filter(cluster == x)
+  })
+  
+  list_of_plots <- lapply(list_of_subsets, create_plots)
+  list_1 <- do.call(c, list_of_plots)
+  list_2 <- lapply(vector_numb_clusters, function(i) {
+  	textGrob(paste("Cluster", i, "\n n =", numb_trips_cluster[i]), 
+  					 gp = gpar(fontsize = 10, font = 3))
+  })
+  list_combined <- list()
+  
+  int_index_1 <- 1
+  int_index_2 <- 1
+  int_total_length <- length(list_1) + length(list_2) 
+  
+  for (i in 1:int_total_length) {
+  	print(i)
+  	if ((i %% int_n_col)!=0) {
+  		list_combined[[i]] <- list_1[[int_index_1]]
+  		int_index_1 <- int_index_1 + 1	
+  	} else {
+  		list_combined[[i]] <- list_2[[int_index_2]]
+  		int_index_2 <- int_index_2 + 1	
+  	}
+  }
+
+  
+  grid_layout <- do.call("grid.arrange", c(list_combined, ncol = int_n_col))
+  
+  return(grid_layout)
+}
+
+
+
+# Documentation: create_gmm_dt
+# Usage: create_gmm_dt(char_cols, dt, dt_norm)
+# Description: Takes num vars from dt_norm and int vars from dt
+# Args/Options: char_cols, dt, dt_norm
+# Returns: datatable
+# Output: ...
+create_gmm_dt <- function(char_cols, dt, dt_norm) {
+	list_of_cols <- list()
+	i <- 1
+	for(name in char_cols){
+		class <- dt[,..name] %>% pull %>% class 
+		if(class=="numeric"){
+			list_of_cols[[i]] = dt_norm[,..name]
+			i = i + 1
+		} else {
+			list_of_cols[[i]] = dt[,..name]
+			i = i + 1
+		}
+	}
+	
+	dt_gmm <- list.cbind(list_of_cols)
+	
+	return(dt_gmm)
+}

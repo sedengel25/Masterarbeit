@@ -33,6 +33,12 @@ library(shiny)
 library(htmlwidgets)
 library(mapview)
 library(magick)
+library(gridExtra)
+library(grid)
+library(GGally)
+library(ggforce)
+library(patchwork)
+library(rlist)
 ################################################################################
 # Paths
 ################################################################################
@@ -40,6 +46,7 @@ library(magick)
 path_trips <- here("data/raw/trips")
 path_raw_bolt_berlin_05_12 <- here("data/raw/raw/BOLT/BERLIN/05_12")
 path_raw_bolt_berlin_06_05 <- here("data/raw/raw/BOLT/BERLIN/06_05")
+path_raw_voi_berlin_06_05 <- here("data/raw/raw/VOI/BERLIN/06_05")
 path_raw_tier_berlin_05_12 <- here("data/raw/raw/TIER/BERLIN/05_12")
 
 # Processed data
@@ -54,6 +61,8 @@ path_processed_data_7 <- here("data/processed/07")
 path_feather_bolt_berlin_05_12 <-
 	here(path_processed_data_4, "BOLT/BERLIN/05_12")
 path_feather_bolt_berlin_06_05 <-
+	here(path_processed_data_4, "BOLT/BERLIN/06_05")
+path_feather_voi_berlin_06_05 <-
 	here(path_processed_data_4, "BOLT/BERLIN/06_05")
 path_feather_tier_berlin_05_12 <-
 	here(path_processed_data_4, "TIER/BERLIN/05_12")
@@ -74,6 +83,8 @@ path_dt_bolt_berlin_05_12 <-
 	here(path_processed_data_3, "dt_bolt_berlin_05_12.rds")
 path_dt_bolt_berlin_06_05 <-
 	here(path_processed_data_3, "dt_bolt_berlin_06_05.rds")
+path_dt_voi_berlin_06_05 <-
+	here(path_processed_data_3, "dt_voi_berlin_06_05.rds")
 path_dt_tier_berlin_05_12 <-
 	here(path_processed_data_3, "dt_tier_berlin_05_12.rds")
 
@@ -83,6 +94,8 @@ path_dt_charge_bolt_berlin_05_12 <-
 	here(path_processed_data_5, "dt_charge_bolt_berlin_05_12.rds")
 path_dt_charge_bolt_berlin_06_05 <-
 	here(path_processed_data_5, "dt_charge_bolt_berlin_06_05.rds")
+path_dt_charge_voi_berlin_06_05 <-
+	here(path_processed_data_5, "dt_charge_voi_berlin_06_05.rds")
 path_dt_charge_tier_berlin_05_12 <-
 	here(path_processed_data_5, "dt_charge_tier_berlin_05_12.rds")
 
@@ -107,3 +120,17 @@ path_heatmaps_bolt_berlin_05_12 <- here(path_output_07, "BOLT/BERLIN/05_12")
 # Configurations
 ################################################################################
 options(scipen = 999)
+
+
+
+cbPalette <-
+	c(
+		"#999999",
+		"#E69F00",
+		"#56B4E9",
+		"#009E73",
+		"#F0E442",
+		"#0072B2",
+		"#D55E00",
+		"#CC79A7"
+	)
