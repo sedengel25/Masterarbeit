@@ -734,7 +734,8 @@ prepare_gmm <- function(dt) {
 					 charge_loss,
 					 charge_increase, 
 					 time_of_day,
-					 part_of_week)
+					 part_of_week,
+					 day)
 	
 	return(list("dt" = dt, "factor_levels" = factor_levels))
 	
@@ -775,7 +776,22 @@ create_plots <- function(dt_sub) {
 	plots <- list()
 	variables <- unique(dt_sub$variable)
 	print(variables)
-		if("last_trip" %in% variables){
+	
+	if("day" %in% variables){
+		p_last_trip <- ggplot(dt_sub) +
+			geom_bar(
+				data = . %>% filter(variable == "day"),
+				aes(x = value)
+			) +
+			scale_x_continuous(name = "day", 
+												 limits = c(0,
+												 					 14))
+		plots[[i]] <- p_last_trip
+		i = i +1
+	}
+	
+	
+	if("last_trip" %in% variables){
 			p_last_trip <- ggplot(dt_sub) +
 				geom_bar(
 					data = . %>% filter(variable == "last_trip"),

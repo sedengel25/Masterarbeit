@@ -12,6 +12,7 @@ dt <- read_rds(path_dt_charge_bolt_berlin_05_12)
 min_date <- min(dt$start_time)
 
 
+
 ###############################################################################
 # Trying to detect maintenance- /charging- / relocation-trips
 ################################################################################
@@ -21,8 +22,9 @@ dt <- dt %>%
 				 start_hour = hour(start_time),
 				 dest_hour = hour(dest_time),
 				 day = as.integer(difftime(start_time, min_date, units = "days")) + 1)%>%
-	filter(charge_start > -1) # Trips started between 00:00 and 00:01 don't have charge-
-											# information
+	filter(charge_start > -1,
+				 charge_dest > -1) 
+# Trips started between 00:00 and 00:01 don't have charge-information
 
 # Add 'last_trip'
 # dt <- dt %>%
@@ -91,13 +93,13 @@ dt <- dt %>%
 # ggvenn(dt_venn, colnames(dt_venn))
 
 
-ggplot_charge_vs_noncharge <-
-	create_plot_compare_charge_noncharge(dt_1 = dt %>%
-																			 	filter(charge_increase == TRUE),
-																			 dt_2 = dt %>%
-																			 	filter(charge_increase == FALSE))
-
-ggplot_charge_vs_noncharge %>% grid.draw()
+# ggplot_charge_vs_noncharge <-
+# 	create_plot_compare_charge_noncharge(dt_1 = dt %>%
+# 																			 	filter(charge_increase == TRUE),
+# 																			 dt_2 = dt %>%
+# 																			 	filter(charge_increase == FALSE))
+# 
+# ggplot_charge_vs_noncharge %>% grid.draw()
 
 
 ###############################################################################
@@ -118,7 +120,7 @@ dt_norm <- normalize_dt(dt = dt[,..int_idx_continous_vars])
 
 
 # Select columns for Clustering
-char_cols <- c("distance", "duration", "charge_loss")
+char_cols <- c("duration", "charge_loss")
 dt_gmm <- create_gmm_dt(char_cols = char_cols, dt_norm = dt_norm, dt = dt)
 
 # dt_vars_class <- dt_gmm %>% summary.default %>% as.data.frame %>% 
@@ -130,8 +132,8 @@ gmm <- Mclust(data = dt_gmm)
 dt_c <- dt[,..char_cols] %>%
 	mutate(cluster = gmm$classification)
 
-dt_c <- dt_c %>%
-	mutate(distance = distance + 0.01)
+# dt_c <- dt_c %>%
+# 	mutate(distance = distance + 0.01)
 
 # Here, we're adding another condition to differentiate between binary and non-binary categorical variables.
 tibble_dt_c <- dt_c %>% 
@@ -145,17 +147,62 @@ tibble_dt_c <- dt_c %>%
 
 list_max_val <- lapply(dt[,..char_cols], max)
 list_min_val <- lapply(dt[,..char_cols], min)
-list_min_val$distance <- list_min_val$distance + 0.01
+# list_min_val$distance <- list_min_val$distance + 0.01
 list_max_val$charge_loss <- quantile(dt_c$charge_loss, 0.99) 
 
 
 create_mixed_grid_vars_over_cluster(dt_pivot_longer = tibble_dt_c)
 
-dt_c_5_9 <- dt_c %>%
-	filter(cluster == 5 | cluster == 9)
 
-dt_c_5_9
 
+
+
+dt_c %>%
+	filter(cluster == 4) %>%
+	filter(time_of_day == 4) %>%
+	summary
+
+
+
+
+
+
+
+# dt_c_4 <- dt_c %>%
+# 	filter(cluster == 4) %>%
+# 	select(-all_of("cluster"))
+# 
+# dt_c_4_norm <- normalize_dt(dt = dt_c_4)
+# char_cols <- c("duration", "charge_loss", "time_of_day", "distance")
+# dt_gmm_c_4 <- create_gmm_dt(char_cols = char_cols,
+# 															dt_norm = dt_c_4_norm,
+# 															dt = dt_c_4)
+# 
+# gmm_c_4 <-  Mclust(data = dt_gmm_c_4)
+# dt_c_4_c <- dt_c_4 %>%
+# 	mutate(cluster = gmm_c_4$classification)
+# # dt_c_4_c <- dt_c_4_c %>%
+# # 	mutate(distance = distance + 0.01)
+# 
+# tibble_dt_c_4 <- dt_c_4_c %>%
+# 	pivot_longer(cols = -cluster, names_to = "variable", values_to = "value") %>%
+# 	as.data.table
+# 
+# list_max_val <- lapply(dt[,..char_cols], max)
+# list_min_val <- lapply(dt[,..char_cols], min)
+# list_min_val$distance <- list_min_val$distance + 0.01
+# list_max_val$charge_loss <- quantile(dt_c_4_c$charge_loss, 0.99)
+# create_mixed_grid_vars_over_cluster(dt_pivot_longer = tibble_dt_c_4)
+# 
+# 
+# dt_c_4_c <- dt_c_4_c %>% 
+# 	mutate(charge_per_hour = (charge_loss/duration)*60)
+# 
+# create_summary_for_clusters(dt_c_4_c)
+# 
+# dt_c <- dt_c %>% 
+# 	mutate(charge_per_hour = (charge_loss/duration)*60)
+# create_summary_for_clusters(dt_c)
 ###############################################################################
 # Spatial
 ################################################################################
