@@ -67,7 +67,7 @@ add_timestamp <- function(dt){
 			min,
 			"_",
 			sec)) %>% 
-		filter(hour(start_time) != 0) %>% # Rohdaten zur Stunde 0
+		# filter(hour(start_time) != 0) %>% # Rohdaten zur Stunde 0
 		select(-all_of(
 			c("year","month","day","hour","min","sec")
 		))
@@ -117,7 +117,32 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 		dt[i, "charge_start"] <- charge_start
 		
 		### Dest charge -------------------------------------------------
-		timestamp_dest <- dt[i, "timestamp_dest"]
+		dest_hour <- hour(dt[i, "dest_time"] %>% pull)
+		ride_i <- dt[i, "ride"] %>% as.integer
+
+		if(dest_hour==0){
+			while(dest_hour==0){
+				
+				ride_i <- (ride_i + 1) %>% as.integer 
+
+				timestamp_dest <- dt %>%
+					filter(id == id_i,
+								 ride == ride_i) %>%
+					select(timestamp_dest) %>%
+					pull
+				
+				dest_hour <- dt %>%
+					filter(id == id_i,
+								 ride == ride_i) %>%
+					select(dest_time) %>%
+					pull %>%
+					hour
+				}
+		} else {
+			timestamp_dest <- dt[i, "timestamp_dest"]
+		}
+
+
 		filename_dest <- here(input_path, timestamp_dest)
 		fileending_dest <- ".feather"
 		path_feather_dest <- paste0(filename_dest, fileending_dest)

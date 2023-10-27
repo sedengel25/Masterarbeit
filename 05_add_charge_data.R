@@ -9,17 +9,17 @@ source("./src/05_utils.R")
 
 
 # Reads processed data
-dt <- read_rds(path_dt_bolt_berlin_05_12)
+dt <- read_rds(path_dt_bolt_berlin_06_05)
 
 # List raw files
-list_feather_files <- list.files(path = path_feather_bolt_berlin_05_12, 
+list_feather_files <- list.files(path = path_feather_bolt_berlin_06_05, 
 																		 full.names = TRUE)
 
 # Sort files
 list_feather_files <- sort_files_datetime_asc(list = list_feather_files)
 
 # Read in feather files
-feather_data <- lapply(list_feather_files, read_feather)
+# feather_data <- lapply(list_feather_files, read_feather)
 
 # feather_data <- read_rds("C:/r_projects/Masterarbeit/tier_feather_data.rds")
 
@@ -36,8 +36,11 @@ dt <- add_timestamp(dt = dt)
 
 
 add_charge_col_bolt(dt = dt, 
-										input_path = path_feather_bolt_berlin_05_12,
-										output_path = path_dt_charge_bolt_berlin_05_12)
+										input_path = path_feather_bolt_berlin_06_05,
+										output_path = path_dt_charge_bolt_berlin_06_05)
+
+
+
 
 
 
