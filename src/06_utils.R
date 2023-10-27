@@ -589,17 +589,17 @@ create_berlin_leaflet_map <- function() {
 # Output: ...
 create_plot_compare_charge_noncharge <- function(dt_1, dt_2) {
 	p1.1 <- ggplot(dt_1) + 
-		geom_point(aes(x = charge_after, y = duration), color ="#E69F00")
+		geom_point(aes(x = charge_dest, y = duration), color ="#E69F00")
 	
 	p1.2 <- ggplot(dt_2) + 
-		geom_point(aes(x = charge_after, y = duration), color ="#56B4E9")
+		geom_point(aes(x = charge_dest, y = duration), color ="#56B4E9")
 	
 	
 	p2.1 <- ggplot(dt_1) + 
-		geom_boxplot(aes(x = charge_after)) 
+		geom_boxplot(aes(x = charge_dest)) 
 	
 	p2.2 <- ggplot(dt_2) + 
-		geom_boxplot(aes(x = charge_after)) 
+		geom_boxplot(aes(x = charge_dest)) 
 	
 	p3.1 <- ggplot(dt_1) + 
 		geom_boxplot(aes(x = log(duration))) +
@@ -706,35 +706,32 @@ prepare_gmm <- function(dt) {
 		
 	dt <- dt %>%
 		mutate(
-			last_trip = factor(last_trip),
 			charge_increase = factor(charge_increase),
 			time_of_day = factor(time_of_day),
 			part_of_week = factor(part_of_week)
 		)
 	
-	print(dt)
+
 	factor_levels <- list(
-		last_trip = levels(dt$last_trip),
 		charge_increase = levels(dt$charge_increase),
 		time_of_day = levels(dt$time_of_day),
 		part_of_week = levels(dt$part_of_week)
 	)
 
-	print(factor_levels)
+
 	
 
 	dt <- dt %>%
 		mutate(
-			last_trip = as.integer(last_trip),
 			charge_increase = as.integer(charge_increase),
 			time_of_day = as.integer(time_of_day),
 			part_of_week = as.integer(part_of_week)
 		) %>%
 		select(distance, 
 					 duration, 
-					 charge, 
+					 charge_start,
+					 charge_dest,
 					 charge_loss,
-					 last_trip, 
 					 charge_increase, 
 					 time_of_day,
 					 part_of_week)
@@ -844,7 +841,7 @@ create_plots <- function(dt_sub) {
 										y = 0.5,
 										label =round(mean(value),2)),
 								color = "#D55E00") + 
-			scale_x_continuous(name = "distance", 
+			scale_x_continuous(name = "log-distance", 
 												 limits = c(list_min_val$distance %>% log,
 												 					 list_max_val$distance %>% log))
 		
@@ -861,7 +858,7 @@ create_plots <- function(dt_sub) {
 										y = 0.5,
 										label =round(mean(value),2)),
 								color = "#D55E00") + 
-			scale_x_continuous(name = "duration", 
+			scale_x_continuous(name = "log-duration", 
 												 limits = c(list_min_val$duration %>% log,
 												 					 list_max_val$duration %>% log))
 		
@@ -885,12 +882,12 @@ create_plots <- function(dt_sub) {
 
 	if("charge_loss" %in% variables){
 		p_charge_loss <- ggplot(dt_sub) + 
-			geom_density(
+			geom_bar(
 				data = . %>% filter(variable == "charge_loss"), 
 				aes(x = value)
 			) +
 			scale_x_continuous(name = "charge_loss", 
-												 limits = c(list_min_val$charge_loss,
+												 limits = c(-1,
 												 					  list_max_val$charge_loss))
 		
 		plots[[i]] <- p_charge_loss
