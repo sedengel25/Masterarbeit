@@ -37,7 +37,7 @@ add_timestamp <- function(dt){
 					 hour = hour(start_time),
 					 min = minute(start_time),
 					 sec = second(start_time)) %>%
-		mutate(timestamp = paste0(
+		mutate(timestamp_start = paste0(
 			year,
 			"_",
 			month,
@@ -49,7 +49,25 @@ add_timestamp <- function(dt){
 			min,
 			"_",
 			sec)) %>%
-		filter(hour != 0) %>% # Rohdaten zur Stunde 0
+		mutate(year = year(dest_time),
+					 month = month(dest_time),
+					 day = day(dest_time),
+					 hour = hour(dest_time),
+					 min = minute(dest_time),
+					 sec = second(dest_time)) %>%
+		mutate(timestamp_dest = paste0(
+			year,
+			"_",
+			month,
+			"_",
+			day,
+			"_",
+			hour,
+			"_",
+			min,
+			"_",
+			sec)) %>% 
+		filter(hour(start_time) != 0) %>% # Rohdaten zur Stunde 0
 		select(-all_of(
 			c("year","month","day","hour","min","sec")
 		))
@@ -66,35 +84,63 @@ add_timestamp <- function(dt){
 # Output: ...
 add_charge_col_bolt <- function(dt, input_path, output_path){
 	
-	pb <- txtProgressBar(min = 0, max = 100, style = 3)
+	pb <- txtProgressBar(min = 0, max = nrow(dt), style = 3)
 	
 	for(i in 1:nrow(dt)){
 		setTxtProgressBar(pb, i)
 		
 		id_i <- dt[i, "id"] %>% as.integer
-		timestamp <- dt[i, "timestamp"]
-		filename <- here(input_path, timestamp)
-		fileending <- ".feather"
-		path_feather <- paste0(filename, fileending)
-		feather_idx <- match(path_feather, list_feather_files) - 1
-		if(is.na(feather_idx)){
+		# print(id_i)
+		
+		### Start charge -------------------------------------------------
+		timestamp_start <- dt[i, "timestamp_start"]
+		filename_start <- here(input_path, timestamp_start)
+		fileending_start <- ".feather"
+		path_feather_start <- paste0(filename_start, fileending_start)
+		feather_idx_start <- match(path_feather_start, list_feather_files) - 1
+		if(is.na(feather_idx_start)){
 			next
 		}
-		data <- feather_data[[feather_idx]] 
-		print(id_i)
-		print(feather_idx)
-		# print(data)
-		charge <- data %>%
+		
+		
+		data_start <- feather_data[[feather_idx_start]] 
+		# print("start")
+		charge_start <- data_start %>%
 			filter(id == id_i) %>%
 			select(charge) %>%
 			pull() %>%
 			as.integer()
+		# print(charge_start)
+		if(length(charge_start)==0){
+			next
+		}
+		dt[i, "charge_start"] <- charge_start
 		
-		if(length(charge)==0){
+		### Dest charge -------------------------------------------------
+		timestamp_dest <- dt[i, "timestamp_dest"]
+		filename_dest <- here(input_path, timestamp_dest)
+		fileending_dest <- ".feather"
+		path_feather_dest <- paste0(filename_dest, fileending_dest)
+
+		feather_idx_dest <- match(path_feather_dest, list_feather_files)
+		if(is.na(feather_idx_dest)){
 			next
 		}
 		
-		dt[i, "charge"] <- charge
+		data_dest <- feather_data[[feather_idx_dest]] 
+		
+
+		charge_dest <- data_dest %>%
+			filter(id == id_i) %>%
+			select(charge) %>%
+			pull() %>%
+			as.integer()
+		# print(charge_dest)
+		if(length(charge_dest)==0){
+			next
+		}
+		dt[i, "charge_dest"] <- charge_dest
+
 
 	}
 	write_rds(dt, file = output_path)
