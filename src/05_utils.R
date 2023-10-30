@@ -119,6 +119,10 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 		### Dest charge -------------------------------------------------
 		dest_hour <- hour(dt[i, "dest_time"] %>% pull)
 		ride_i <- dt[i, "ride"] %>% as.integer
+		
+		if(length(dest_hour)==0){
+			next
+		}
 
 		if(dest_hour==0){
 			while(dest_hour==0){
@@ -137,6 +141,10 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 					select(dest_time) %>%
 					pull %>%
 					hour
+				
+				if(length(dest_hour)==0){
+					break
+				}
 				}
 		} else {
 			timestamp_dest <- dt[i, "timestamp_dest"]
