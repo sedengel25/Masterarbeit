@@ -82,15 +82,15 @@ add_timestamp <- function(dt){
 # Args/Options: dt, input_path, output_path
 # Returns: dt
 # Output: ...
-add_charge_col_bolt <- function(dt, input_path, output_path){
+add_charge_col <- function(dt, input_path, output_path){
 	
 	pb <- txtProgressBar(min = 0, max = nrow(dt), style = 3)
 	
 	for(i in 1:nrow(dt)){
 		setTxtProgressBar(pb, i)
 		
-		id_i <- dt[i, "id"] %>% as.integer
-		# print(id_i)
+		id_i <- dt[i, "id"] %>% as.character
+
 		
 		### Start charge -------------------------------------------------
 		timestamp_start <- dt[i, "timestamp_start"]
@@ -98,22 +98,24 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 		fileending_start <- ".feather"
 		path_feather_start <- paste0(filename_start, fileending_start)
 		feather_idx_start <- match(path_feather_start, list_feather_files) - 1
+		
 		if(is.na(feather_idx_start)){
 			next
 		}
 		
 		
 		data_start <- feather_data[[feather_idx_start]] 
-		# print("start")
+
 		charge_start <- data_start %>%
 			filter(id == id_i) %>%
 			select(charge) %>%
 			pull() %>%
 			as.integer()
-		# print(charge_start)
+
 		if(length(charge_start)==0){
 			next
 		}
+		
 		dt[i, "charge_start"] <- charge_start
 		
 		### Dest charge -------------------------------------------------
@@ -145,7 +147,7 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 				if(length(dest_hour)==0){
 					break
 				}
-				}
+			}
 		} else {
 			timestamp_dest <- dt[i, "timestamp_dest"]
 		}
@@ -154,8 +156,8 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 		filename_dest <- here(input_path, timestamp_dest)
 		fileending_dest <- ".feather"
 		path_feather_dest <- paste0(filename_dest, fileending_dest)
-
 		feather_idx_dest <- match(path_feather_dest, list_feather_files)
+		
 		if(is.na(feather_idx_dest)){
 			next
 		}
@@ -168,12 +170,16 @@ add_charge_col_bolt <- function(dt, input_path, output_path){
 			select(charge) %>%
 			pull() %>%
 			as.integer()
-		# print(charge_dest)
+
 		if(length(charge_dest)==0){
 			next
 		}
+		
 		dt[i, "charge_dest"] <- charge_dest
-
+		# print("Start")
+		# print(charge_start)
+		# print("Dest")
+		# print(charge_dest)
 
 	}
 	write_rds(dt, file = output_path)
@@ -201,20 +207,19 @@ add_charge_col_tier <- function(dt, input_path, output_path){
 		fileending <- ".feather"
 		path_feather <- paste0(filename, fileending)
 		feather_idx <- match(path_feather, list_feather_files) - 1
+		
 		if(is.na(feather_idx)){
 			next
 		}
 		data <- feather_data[[feather_idx]] 
 		data <- data %>% 
 			distinct(id, .keep_all = TRUE) 
-		print(id_i)
-		print(feather_idx)
-		# print(data)
+
 		charge <- data %>%
 			filter(id == id_i) %>%
 			select(batteryLevel) %>%
-			# pull() %>%
 			as.integer()
+		
 		dist_on_charge <- data %>%
 			filter(id == id_i) %>%
 			select(currentRangeMeters) %>%

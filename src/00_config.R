@@ -47,6 +47,7 @@ path_trips <- here("data/raw/trips")
 path_raw_bolt_berlin_05_12 <- here("data/raw/raw/BOLT/BERLIN/05_12")
 path_raw_bolt_berlin_06_05 <- here("data/raw/raw/BOLT/BERLIN/06_05")
 path_raw_voi_berlin_06_05 <- here("data/raw/raw/VOI/BERLIN/06_05")
+path_raw_voi_cologne_06_05 <- here("data/raw/raw/VOI/COLOGNE/06_05")
 path_raw_tier_berlin_05_12 <- here("data/raw/raw/TIER/BERLIN/05_12")
 
 # Processed data
@@ -63,7 +64,9 @@ path_feather_bolt_berlin_05_12 <-
 path_feather_bolt_berlin_06_05 <-
 	here(path_processed_data_4, "BOLT/BERLIN/06_05")
 path_feather_voi_berlin_06_05 <-
-	here(path_processed_data_4, "BOLT/BERLIN/06_05")
+	here(path_processed_data_4, "VOI/BERLIN/06_05")
+path_feather_voi_cologne_06_05 <-
+	here(path_processed_data_4, "VOI/COLOGNE/06_05")
 path_feather_tier_berlin_05_12 <-
 	here(path_processed_data_4, "TIER/BERLIN/05_12")
 
@@ -85,6 +88,8 @@ path_dt_bolt_berlin_06_05 <-
 	here(path_processed_data_3, "dt_bolt_berlin_06_05.rds")
 path_dt_voi_berlin_06_05 <-
 	here(path_processed_data_3, "dt_voi_berlin_06_05.rds")
+path_dt_voi_cologne_06_05 <-
+	here(path_processed_data_3, "dt_voi_cologne_06_05.rds")
 path_dt_tier_berlin_05_12 <-
 	here(path_processed_data_3, "dt_tier_berlin_05_12.rds")
 
@@ -96,6 +101,8 @@ path_dt_charge_bolt_berlin_06_05 <-
 	here(path_processed_data_5, "dt_charge_bolt_berlin_06_05.rds")
 path_dt_charge_voi_berlin_06_05 <-
 	here(path_processed_data_5, "dt_charge_voi_berlin_06_05.rds")
+path_dt_charge_voi_cologne_06_05 <-
+	here(path_processed_data_5, "dt_charge_voi_cologne_06_05.rds")
 path_dt_charge_tier_berlin_05_12 <-
 	here(path_processed_data_5, "dt_charge_tier_berlin_05_12.rds")
 

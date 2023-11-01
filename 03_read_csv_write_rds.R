@@ -18,11 +18,11 @@ dt_table <- read_rds(path_dt_table)
 
 list_of_ids <- choose_datasets(dt = dt_table,
 															 days = 14,
-															 provider = "BOLT",
-															 city = "BERLIN")
+															 provider = "VOI",
+															 city = "COLOGNE")
 
 
-dt <- combine_files_to_dt(list = list_of_files[list_of_ids[1]], 
+dt <- combine_files_to_dt(list = list_of_files[list_of_ids[2]], 
 													path = path_processed_data_1) 
 
 
@@ -30,5 +30,5 @@ dt <- combine_files_to_dt(list = list_of_files[list_of_ids[1]],
 ################################################################################
 # Save data
 ################################################################################
-write_rds(x = dt, file = path_dt_bolt_berlin_05_12)
+write_rds(x = dt, file = path_dt_voi_cologne_06_05)
 

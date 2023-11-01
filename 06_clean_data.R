@@ -7,7 +7,8 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/06_utils.R")
 
-dt <- read_rds(path_dt_charge_bolt_berlin_05_12)
+dt <- read_rds(path_dt_charge_voi_berlin_06_05)
+
 
 min_date <- min(dt$start_time)
 
@@ -57,7 +58,9 @@ dt <- dt %>%
 																	FALSE)
 	) 
 
-
+dt %>%
+	filter(charge_increase==TRUE) %>%
+	nrow
 # Move that column by 1
 # dt <- dt %>%
 # 	mutate(charge_increase = lead(charge_increase)) %>%
@@ -98,7 +101,7 @@ dt <- dt %>%
 # 																			 	filter(charge_increase == TRUE),
 # 																			 dt_2 = dt %>%
 # 																			 	filter(charge_increase == FALSE))
-# 
+
 # ggplot_charge_vs_noncharge %>% grid.draw()
 
 
@@ -158,8 +161,7 @@ create_mixed_grid_vars_over_cluster(dt_pivot_longer = tibble_dt_c)
 
 
 dt_c %>%
-	filter(cluster == 4) %>%
-	filter(time_of_day == 4) %>%
+	filter(cluster == 1)%>% 
 	summary
 
 
