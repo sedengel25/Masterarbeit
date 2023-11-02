@@ -9,29 +9,14 @@ source("./src/07_utils.R")
 
 
 # Read in clean data
-# dt_normal_trips_c <- read_rds(path_dt_clustered_bolt_berlin_05_12)
-# dt_normal_trips_c <- dt_normal_trips_c %>%
-# 	filter(cluster!=9)
-# 
-# dt_normal_trips_c <- dt_normal_trips_c %>%
-# 	left_join(dt_normal_trips, by = c("id" = "id", "ride" = "ride")) %>%
-# 	select(start_loc_lat, start_loc_lon, dest_loc_lat, dest_loc_lon,
-# 				 start_time, start_hour.y, distance.y, duration.y, day.y, charge.y)
-# colnames(dt_normal_trips_c) <- c("start_loc_lat", 
-# 																 "start_loc_lon", 
-# 																 "dest_loc_lat", 
-# 																 "dest_loc_lon",
-# 																 "start_time",
-# 																 "start_hour", 
-# 																 "distance", 
-# 																 "duration", 
-# 																 "day", 
-# 																 "charge")
-# 
-# dt_analysis <- dt_normal_trips_c
+dt_clean <- read_rds(path_dt_clustered_bolt_berlin_06_05)
+dt_org <- read_rds(path_dt_bolt_berlin_06_05)
 
 
 
+###############################################################################
+# Shiny
+################################################################################
 # Define the UI
 ui <- fluidPage(
 	titlePanel("My Leaflet Map in Shiny"),  # Add a title panel 

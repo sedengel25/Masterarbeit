@@ -10,6 +10,6 @@ source("./src/04_utils.R")
 
 
 
-create_feather_files_voi(input_path = path_raw_voi_cologne_06_05,
+create_feather_files_tier(input_path = path_raw_tier_munich_09_13,
 										 output_path = "./")
 

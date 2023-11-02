@@ -7,8 +7,10 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/06_utils.R")
 
-dt <- read_rds(path_dt_charge_voi_berlin_06_05)
+dt <- read_rds(path_dt_charge_voi_cologne_06_05)
 
+dt_id <- dt %>%
+	select(id, ride)
 
 min_date <- min(dt$start_time)
 
@@ -84,6 +86,7 @@ dt <- dt %>%
 	mutate(charge_loss = charge_start - charge_dest)
 
 
+
 # Venn diagram
 # dt_venn <- dt %>%
 # 	select(dist_greater_charge
@@ -99,7 +102,7 @@ dt <- dt %>%
 # ggplot_charge_vs_noncharge <-
 # 	create_plot_compare_charge_noncharge(dt_1 = dt %>%
 # 																			 	filter(charge_increase == TRUE),
-# 																			 dt_2 = dt %>%
+#  																			 dt_2 = dt %>%
 # 																			 	filter(charge_increase == FALSE))
 
 # ggplot_charge_vs_noncharge %>% grid.draw()
@@ -110,6 +113,9 @@ dt <- dt %>%
 ################################################################################
 dt <- dt %>%
 	filter(charge_increase == FALSE)
+dt_id <- dt %>%
+	filter(charge_increase == FALSE) %>%
+	select(id, ride)
 
 
 # Turns all categorical vars into integer
@@ -153,58 +159,20 @@ list_min_val <- lapply(dt[,..char_cols], min)
 # list_min_val$distance <- list_min_val$distance + 0.01
 list_max_val$charge_loss <- quantile(dt_c$charge_loss, 0.99) 
 
-
+set.seed(123)
 create_mixed_grid_vars_over_cluster(dt_pivot_longer = tibble_dt_c)
 
 
 
+dt_id <- dt_id %>%
+	mutate(cluster = gmm$classification)
+
+dt_id <- dt_id %>%
+	filter(cluster != 8) 
+
+write_rds(dt_id, path_dt_clustered_voi_cologne_06_05)
 
 
-dt_c %>%
-	filter(cluster == 1)%>% 
-	summary
-
-
-
-
-
-
-
-# dt_c_4 <- dt_c %>%
-# 	filter(cluster == 4) %>%
-# 	select(-all_of("cluster"))
-# 
-# dt_c_4_norm <- normalize_dt(dt = dt_c_4)
-# char_cols <- c("duration", "charge_loss", "time_of_day", "distance")
-# dt_gmm_c_4 <- create_gmm_dt(char_cols = char_cols,
-# 															dt_norm = dt_c_4_norm,
-# 															dt = dt_c_4)
-# 
-# gmm_c_4 <-  Mclust(data = dt_gmm_c_4)
-# dt_c_4_c <- dt_c_4 %>%
-# 	mutate(cluster = gmm_c_4$classification)
-# # dt_c_4_c <- dt_c_4_c %>%
-# # 	mutate(distance = distance + 0.01)
-# 
-# tibble_dt_c_4 <- dt_c_4_c %>%
-# 	pivot_longer(cols = -cluster, names_to = "variable", values_to = "value") %>%
-# 	as.data.table
-# 
-# list_max_val <- lapply(dt[,..char_cols], max)
-# list_min_val <- lapply(dt[,..char_cols], min)
-# list_min_val$distance <- list_min_val$distance + 0.01
-# list_max_val$charge_loss <- quantile(dt_c_4_c$charge_loss, 0.99)
-# create_mixed_grid_vars_over_cluster(dt_pivot_longer = tibble_dt_c_4)
-# 
-# 
-# dt_c_4_c <- dt_c_4_c %>% 
-# 	mutate(charge_per_hour = (charge_loss/duration)*60)
-# 
-# create_summary_for_clusters(dt_c_4_c)
-# 
-# dt_c <- dt_c %>% 
-# 	mutate(charge_per_hour = (charge_loss/duration)*60)
-# create_summary_for_clusters(dt_c)
 ###############################################################################
 # Spatial
 ################################################################################

@@ -9,10 +9,10 @@ source("./src/05_utils.R")
 
 
 # Reads processed data
-dt <- read_rds(path_dt_voi_cologne_06_05)
+dt <- read_rds(path_dt_tier_munich_09_13)
 
 # List raw files
-list_feather_files <- list.files(path = path_feather_voi_cologne_06_05, 
+list_feather_files <- list.files(path = path_feather_tier_munich_09_13, 
 																		 full.names = TRUE)
 
 # Sort files
@@ -35,8 +35,8 @@ dt <- add_timestamp(dt = dt)
 
 
 add_charge_col(dt = dt, 
-										input_path = path_feather_voi_cologne_06_05,
-										output_path = path_dt_charge_voi_cologne_06_05)
+										input_path = path_feather_tier_munich_09_13,
+										output_path = path_dt_charge_tier_munich_09_13)
 
 
 
