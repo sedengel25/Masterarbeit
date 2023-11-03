@@ -71,7 +71,7 @@ create_feather_files_bolt <- function(input_path, output_path){
 	
 	# List all directories of the raw data containing battery information
 	dirs <- get_directories(path = input_path)
-	
+
 	# pb <- txtProgressBar(min = 1, max = length(dirs), style = 3)
 	
 	lapply(dirs, function(x){
@@ -137,7 +137,9 @@ create_feather_files_tier <- function(input_path, output_path){
 			
 			con <- gzcon(file(y, "rb"))
 			stream <- stream_in(con)
+
 			data <- stream$data[[1]]
+
 			data <- data %>%
 				filter(attributes$vehicleType == "escooter")
 			
@@ -150,13 +152,62 @@ create_feather_files_tier <- function(input_path, output_path){
 			# ...and add it to the data
 			data <- data %>%
 				mutate(timestamp = timestamp,
-							 batteryLevel = attributes$batteryLevel,
-							 currentRangeMeters = attributes$currentRangeMeters) %>%
+							 charge = attributes$batteryLevel,
+							 charge_distance = attributes$currentRangeMeters) %>%
 				select(id, 
-							 batteryLevel, 
-							 currentRangeMeters, 
+							 charge, 
+							 charge_distance, 
 							 timestamp)
 			
+			filename <- here(output_path, timestamp)
+			fileending <- ".feather"
+			path <- paste0(filename, fileending)
+			write_feather(x = data, path = path)
+			close(con)
+		})
+	})
+}
+
+
+
+
+create_feather_files_voi <- function(input_path, output_path){
+	
+	# List all directories of the raw data containing battery information
+	dirs <- get_directories(path = input_path)
+	
+	# pb <- txtProgressBar(min = 1, max = length(dirs), style = 3)
+	
+	lapply(dirs, function(x){
+		
+		# List all files owithin these directories
+		files <- list.files(x, pattern = "\\.gz$", full.names = TRUE)
+		# setTxtProgressBar(pb, x)
+		
+		lapply(files, function(y){
+			
+			con <- gzcon(file(y, "rb"))
+			stream <- stream_in(con)
+			vehicle_groups <- stream$data$vehicle_groups[[1]]
+			vehicles  <- vehicle_groups$vehicles[[1]]
+
+			data <- vehicles %>%
+				filter(category == "scooter")
+			
+			# Create timestamp from filename...
+			timestamp <- strsplit(y,split="\\.")[[1]][1]
+			timestamp <- strsplit(timestamp,split="/")[[1]]
+			length_of_split <- length(timestamp)
+			timestamp <- timestamp[length_of_split]
+			
+			# ...and add it to the data
+			data <- data %>%
+				mutate(timestamp = timestamp,
+							 charge = battery) %>%
+				select(id, 
+							 charge,
+							 timestamp)
+			print(data %>% head)
 			filename <- here(output_path, timestamp)
 			fileending <- ".feather"
 			path <- paste0(filename, fileending)
