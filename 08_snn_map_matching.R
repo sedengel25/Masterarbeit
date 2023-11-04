@@ -29,6 +29,8 @@ shp_cologne_streets <- st_read(path_shp_file_köln_strassen)
 sf_road_segments_mls <- shp_cologne_streets$geometry
 list_sf_road_segments_ls <- split_multiline_in_line(sf_road_segments_mls)
 sf_ls <- st_sfc(list_sf_road_segments_ls)
+
+
 # 1.: Map OD-points onto network (closest road-segment)
 #MISSING
 
