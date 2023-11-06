@@ -41,95 +41,97 @@ library(patchwork)
 library(rlist)
 library(igraph)
 library(sfnetworks)
+library(plyr)
 ################################################################################
 # Paths
 ################################################################################
 # Raw data
-path_trips <- here("data/raw/trips")
-path_raw_bolt_berlin_05_12 <- here("data/raw/raw/BOLT/BERLIN/05_12")
-path_raw_bolt_berlin_06_05 <- here("data/raw/raw/BOLT/BERLIN/06_05")
-path_raw_voi_berlin_06_05 <- here("data/raw/raw/VOI/BERLIN/06_05")
-path_raw_voi_cologne_06_05 <- here("data/raw/raw/VOI/COLOGNE/06_05")
-path_raw_tier_berlin_05_12 <- here("data/raw/raw/TIER/BERLIN/05_12")
-path_raw_tier_munich_09_13 <- here("data/raw/raw/TIER/MUNICH/09_13")
+path_trips <- here::here("data/raw/trips")
+path_raw_bolt_berlin_05_12 <- here::here("data/raw/raw/BOLT/BERLIN/05_12")
+path_raw_bolt_berlin_06_05 <- here::here("data/raw/raw/BOLT/BERLIN/06_05")
+path_raw_voi_berlin_06_05 <- here::here("data/raw/raw/VOI/BERLIN/06_05")
+path_raw_voi_cologne_06_05 <- here::here("data/raw/raw/VOI/COLOGNE/06_05")
+path_raw_tier_berlin_05_12 <- here::here("data/raw/raw/TIER/BERLIN/05_12")
+path_raw_tier_munich_09_13 <- here::here("data/raw/raw/TIER/MUNICH/09_13")
 
 # Processed data
-path_processed_data_1 <- here("data/processed/01")
-path_processed_data_2 <- here("data/processed/02")
-path_processed_data_3 <- here("data/processed/03")
-path_processed_data_4 <- here("data/processed/04")
-path_processed_data_5 <- here("data/processed/05")
-path_processed_data_6 <- here("data/processed/06")
-path_processed_data_7 <- here("data/processed/07")
+path_processed_data_1 <- here::here("data/processed/01")
+path_processed_data_2 <- here::here("data/processed/02")
+path_processed_data_3 <- here::here("data/processed/03")
+path_processed_data_4 <- here::here("data/processed/04")
+path_processed_data_5 <- here::here("data/processed/05")
+path_processed_data_6 <- here::here("data/processed/06")
+path_processed_data_7 <- here::here("data/processed/07")
+
 
 path_feather_bolt_berlin_05_12 <-
-	here(path_processed_data_4, "BOLT/BERLIN/05_12")
+	here::here(path_processed_data_4, "BOLT/BERLIN/05_12")
 path_feather_bolt_berlin_06_05 <-
-	here(path_processed_data_4, "BOLT/BERLIN/06_05")
+	here::here(path_processed_data_4, "BOLT/BERLIN/06_05")
 path_feather_voi_berlin_06_05 <-
-	here(path_processed_data_4, "VOI/BERLIN/06_05")
+	here::here(path_processed_data_4, "VOI/BERLIN/06_05")
 path_feather_voi_cologne_06_05 <-
-	here(path_processed_data_4, "VOI/COLOGNE/06_05")
+	here::here(path_processed_data_4, "VOI/COLOGNE/06_05")
 path_feather_tier_berlin_05_12 <-
-	here(path_processed_data_4, "TIER/BERLIN/05_12")
+	here::here(path_processed_data_4, "TIER/BERLIN/05_12")
 path_feather_tier_munich_09_13 <-
-	here(path_processed_data_4, "TIER/MUNICH/09_13")
+	here::here(path_processed_data_4, "TIER/MUNICH/09_13")
 
 # External data
-path_external_data <- here("data/external")
+path_external_data <- here::here("data/external")
 
 # Output
-path_output_07 <- here("output/07")
+path_output_07 <- here::here("output/07")
 
 ################################################################################
 # Files
 ################################################################################
 # Processed data
-path_dt_table <- here(path_processed_data_2, "dt_table.rds")
-path_dt_plot <- here(path_processed_data_2, "dt_plot.png")
+path_dt_table <- here::here(path_processed_data_2, "dt_table.rds")
+path_dt_plot <- here::here(path_processed_data_2, "dt_plot.png")
 path_dt_bolt_berlin_05_12 <-
-	here(path_processed_data_3, "dt_bolt_berlin_05_12.rds")
+	here::here(path_processed_data_3, "dt_bolt_berlin_05_12.rds")
 path_dt_bolt_berlin_06_05 <-
-	here(path_processed_data_3, "dt_bolt_berlin_06_05.rds")
+	here::here(path_processed_data_3, "dt_bolt_berlin_06_05.rds")
 path_dt_voi_berlin_06_05 <-
-	here(path_processed_data_3, "dt_voi_berlin_06_05.rds")
+	here::here(path_processed_data_3, "dt_voi_berlin_06_05.rds")
 path_dt_voi_cologne_06_05 <-
-	here(path_processed_data_3, "dt_voi_cologne_06_05.rds")
+	here::here(path_processed_data_3, "dt_voi_cologne_06_05.rds")
 path_dt_tier_berlin_05_12 <-
-	here(path_processed_data_3, "dt_tier_berlin_05_12.rds")
+	here::here(path_processed_data_3, "dt_tier_berlin_05_12.rds")
 path_dt_tier_munich_09_13 <-
-	here(path_processed_data_3, "dt_tier_munich_09_13.rds")
+	here::here(path_processed_data_3, "dt_tier_munich_09_13.rds")
 
 
 
 path_dt_charge_bolt_berlin_05_12 <-
-	here(path_processed_data_5, "dt_charge_bolt_berlin_05_12.rds")
+	here::here(path_processed_data_5, "dt_charge_bolt_berlin_05_12.rds")
 path_dt_charge_bolt_berlin_06_05 <-
-	here(path_processed_data_5, "dt_charge_bolt_berlin_06_05.rds")
+	here::here(path_processed_data_5, "dt_charge_bolt_berlin_06_05.rds")
 path_dt_charge_voi_berlin_06_05 <-
-	here(path_processed_data_5, "dt_charge_voi_berlin_06_05.rds")
+	here::here(path_processed_data_5, "dt_charge_voi_berlin_06_05.rds")
 path_dt_charge_voi_cologne_06_05 <-
-	here(path_processed_data_5, "dt_charge_voi_cologne_06_05.rds")
+	here::here(path_processed_data_5, "dt_charge_voi_cologne_06_05.rds")
 path_dt_charge_tier_berlin_05_12 <-
-	here(path_processed_data_5, "dt_charge_tier_berlin_05_12.rds")
+	here::here(path_processed_data_5, "dt_charge_tier_berlin_05_12.rds")
 path_dt_charge_tier_munich_09_13 <-
-	here(path_processed_data_5, "dt_charge_tier_munich_09_13.rds")
+	here::here(path_processed_data_5, "dt_charge_tier_munich_09_13.rds")
 
 
 path_dt_clustered_bolt_berlin_05_12 <-
-	here(path_processed_data_6, "dt_clustered_bolt_berlin_05_12.rds")
+	here::here(path_processed_data_6, "dt_clustered_bolt_berlin_05_12.rds")
 path_dt_clustered_bolt_berlin_06_05 <-
-	here(path_processed_data_6, "dt_clustered_bolt_berlin_06_05.rds")
+	here::here(path_processed_data_6, "dt_clustered_bolt_berlin_06_05.rds")
 path_dt_clustered_voi_cologne_06_05 <-
-	here(path_processed_data_6, "dt_clustered_voi_cologne_06_05.rds")
+	here::here(path_processed_data_6, "dt_clustered_voi_cologne_06_05.rds")
 path_dt_clustered_tier_berlin_05_12 <-
-	here(path_processed_data_6, "dt_clustered_tier_berlin_05_12.rds")
+	here::here(path_processed_data_6, "dt_clustered_tier_berlin_05_12.rds")
 
 # External data
-path_shp_file_berlin <- here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
-path_shp_file_köln_strassen <- here(path_external_data, "shp/köln/Strasse.shp")
+path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
+path_shp_file_köln_strassen <- here::here(path_external_data, "shp/köln/Strasse.shp")
 # Output
-path_heatmaps_bolt_berlin_05_12 <- here(path_output_07, "BOLT/BERLIN/05_12")
+path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
 
 
