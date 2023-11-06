@@ -8,22 +8,6 @@ source("./src/00_utils.R")
 source("./src/08_utils.R")
 
 
-# Read in clean data
-# dt_clean <- read_rds(path_dt_clustered_voi_cologne_06_05)
-# dt_org <- read_rds(path_dt_voi_cologne_06_05)
-# 
-# 
-# dt <- dt_clean %>%
-# 	inner_join(dt_org, c("id", "ride"))
-# 
-# dt_wd_morning_rush <- dt %>%
-# 	mutate(weekday = wday(start_time,week_start = 1),
-# 				 start_hour = hour(start_time)) %>%
-# 	filter(weekday <= 5,
-# 				 start_hour > 6 & start_hour <= 10)
-# 
-
-
 # Read shp-file for considered city
 shp_cologne_streets <- st_read(path_shp_file_köln_strassen)
 sf_road_segments_mls <- shp_cologne_streets$geometry
@@ -58,4 +42,4 @@ dt_full_matrix <- dt_full_matrix %>%
 	mutate(from = as.integer(from),
 				 to = as.integer(to))
 
-write_rds(dt_full_matrix, "dist_mat.rds")
+write_rds(dt_full_matrix, path_dt_distance_matrix)

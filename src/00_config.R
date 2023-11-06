@@ -42,6 +42,7 @@ library(rlist)
 library(igraph)
 library(sfnetworks)
 library(plyr)
+library(sp)
 ################################################################################
 # Paths
 ################################################################################
@@ -62,6 +63,7 @@ path_processed_data_4 <- here::here("data/processed/04")
 path_processed_data_5 <- here::here("data/processed/05")
 path_processed_data_6 <- here::here("data/processed/06")
 path_processed_data_7 <- here::here("data/processed/07")
+path_processed_data_8 <- here::here("data/processed/08")
 
 
 path_feather_bolt_berlin_05_12 <-
@@ -126,6 +128,8 @@ path_dt_clustered_voi_cologne_06_05 <-
 	here::here(path_processed_data_6, "dt_clustered_voi_cologne_06_05.rds")
 path_dt_clustered_tier_berlin_05_12 <-
 	here::here(path_processed_data_6, "dt_clustered_tier_berlin_05_12.rds")
+
+path_dt_distance_matrix <- here::here(path_processed_data_8, "dist_mat.rds")
 
 # External data
 path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
