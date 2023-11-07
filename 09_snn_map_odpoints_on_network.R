@@ -1,7 +1,7 @@
 ################################################################################
 # Big Data Analytics in Transportation (TU Dresden)
 # Master Thesis
-# This file contains maps the OD-points on the street network
+# This file maps the OD-points on the street network
 ################################################################################
 source("./src/00_config.R")
 source("./src/00_utils.R")
@@ -45,8 +45,8 @@ sf_dest <- transform_num_to_WGS84_to_UTM32(dt = dt_wd_morning_rush,
 st_crs(sf_ls) <- st_crs(sf_origin)
 
 sf_origin <- map_points_on_road_network(sf_points = sf_origin, buffer_size = 50)
+write_rds(sf_origin, path_sf_mapped_origin)
 
-write_rds(sf_origin, "mapped_origin.rds")
 sf_dest <- map_points_on_road_network(sf_points = sf_dest, buffer_size = 50)
-write_rds(sf_dest, "mapped_dest.rds")
+write_rds(sf_dest, path_sf_mapped_dest)
 

@@ -64,6 +64,7 @@ path_processed_data_5 <- here::here("data/processed/05")
 path_processed_data_6 <- here::here("data/processed/06")
 path_processed_data_7 <- here::here("data/processed/07")
 path_processed_data_8 <- here::here("data/processed/08")
+path_processed_data_9 <- here::here("data/processed/09")
 
 
 path_feather_bolt_berlin_05_12 <-
@@ -130,6 +131,10 @@ path_dt_clustered_tier_berlin_05_12 <-
 	here::here(path_processed_data_6, "dt_clustered_tier_berlin_05_12.rds")
 
 path_dt_distance_matrix <- here::here(path_processed_data_8, "dist_mat.rds")
+
+
+path_sf_mapped_origin <- here::here(path_processed_data_9, "mapped_origin.rds")
+path_sf_mapped_dest <- here::here(path_processed_data_9, "mapped_dest.rds")
 
 # External data
 path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
