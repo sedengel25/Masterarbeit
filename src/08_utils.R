@@ -3,28 +3,6 @@
 # Master Thesis
 # This file contains all functions to execute 08_snn_create_network_dist_map.R
 #############################################################################
-# Documentation: split_multiline_in_line
-# Usage: split_multiline_in_line(sf_mls)
-# Description: Splits sf-multilinestrigns into sf-linestrings
-# Args/Options: sf_mls
-# Returns: list
-# Output: ...
-split_multiline_in_line <- function(sf_mls) {
-	list_of_ls <- list()
-	idx <- 1
-	for(i in 1:length(sf_mls)){
-		for(j in 1:length(st_cast(sf_mls[i], "LINESTRING"))){
-			ls <- st_cast(sf_mls[i], "LINESTRING")[j] 
-			list_of_ls[idx] <- ls
-			idx <- idx + 1
-		}
-	}
-	
-	return(list_of_ls)
-}
-
-
-
 # Documentation: create_road_nodes_df
 # Usage: create_road_nodes_df(list_sf_road_segments_ls)
 # Description: Creates a df containing all nodes of all linestrings
@@ -76,48 +54,56 @@ create_road_nodes_df <- function(list_sf_road_segments_ls) {
 # Args/Options: nodes, buffer_size (m)
 # Returns: list
 # Output: ...
-create_dist_mat <- function(nodes, buffer_size) {
+create_dist_mat <- function(edges, buffer_size, sf_ls) {
+
 	list_of_dts <- list()
-	pb <- txtProgressBar(min = 0, max = nrow(nodes), style = 3)
-	
+	pb <- txtProgressBar(min = 0, max = nrow(edges), style = 3)
+
 	# Loop through each node of the network
-	for(i in 1:nrow(nodes)){
-		node <- nodes[i] %>% st_as_sf
-		node_geom <- node$x
-		
+	for(i in 1:nrow(edges)){
+		# i <- 1
+		# buffer_size <- 1000
+		edge <- edges[i,]
+		print(edge)
 		# Create a buffer
-		buffer <- st_buffer(node_geom, buffer_size)
-		
+		buffer <- st_buffer(edge, buffer_size)
+		print(buffer)
 		# Get all linestrings within buffer
-		intersec <- st_intersection(buffer, sf_ls)
-		intersec_ls <- intersec[st_geometry_type(intersec)=="LINESTRING"]
-		
+		intersec_ls <- st_intersection(buffer, sf_ls)
+		print(intersec_ls)
 		# Create sub-network based on linestrings within the buffer
-		sub_network <- as_sfnetwork(intersec_ls)
+		sub_network <- as_sfnetwork(intersec_ls$x)
 		
 		# Extract network's nodes
-		nodes_sub_network <- sub_network %>%
-			as.data.table
+		# nodes_sub_network <- sub_network %>%
+		# 	as.data.table
+
 		
 		# Extract network's edges
 		edges_sub_network <- sub_network %>%
 			activate(edges) %>%
-			as.data.table
+			as.data.table %>%
+			st_as_sf
 		
+		print(edges_sub_network)
 		# We compare the ls found in the sub-net with the whole net to ensure that ...
 		# ... only full ls and not cuttet ls (due to buffer) are used and ...
 		# ... the ids of the points are the same (vs. starting at 1 in each sub-net)
-		same_edges <- st_equals( edges$x, edges_sub_network$x) %>% as.integer()
+		
+		# Second problem: If a LS is only partly in buffer we loose a street
+		same_edges <- st_equals(edges, edges_sub_network) %>% as.integer()
 		same_edges <- which(!is.na(same_edges))
 		edges_sub_network <- edges[same_edges,]
 		
+
 		
+
 		if(nrow(edges_sub_network)==0){
 			next
 		}
 		
 		# Get length of network's edges
-		num_edges_weight <- edges_sub_network$x %>% st_as_sf %>% st_length
+		num_edges_weight <- edges_sub_network %>% st_length
 		
 		# Create an igraph
 		g <- graph_from_data_frame(
@@ -129,6 +115,7 @@ create_dist_mat <- function(nodes, buffer_size) {
 		)
 		g <- as.undirected(g)
 		
+
 		# Get shortest paths between all nodes contained in the network
 		mat_shortest_path <- shortest.paths(g, v=V(g), to=V(g))
 		mat_shortest_path[is.infinite(mat_shortest_path)] <- NA
@@ -141,10 +128,11 @@ create_dist_mat <- function(nodes, buffer_size) {
 			pivot_longer(cols = -from, names_to = "to", values_to = "distance") %>%
 			filter(!is.na(distance)) %>%
 			as.data.table
-		
+
 		mat_dt <- mat_dt %>%
-			filter(distance < buffer_size)
+			filter(from < to)
 		
+		print(mat_dt)
 		list_of_dts[[i]] <- mat_dt
 		setTxtProgressBar(pb, i)
 		

@@ -5,7 +5,6 @@
 ################################################################################
 source("./src/00_config.R")
 source("./src/00_utils.R")
-source("./src/08_utils.R")
 source("./src/09_utils.R")
 
 
@@ -45,8 +44,8 @@ sf_dest <- transform_num_to_WGS84_to_UTM32(dt = dt_wd_morning_rush,
 st_crs(sf_ls) <- st_crs(sf_origin)
 
 sf_origin <- map_points_on_road_network(sf_points = sf_origin, buffer_size = 50)
-write_rds(sf_origin, path_sf_mapped_origin)
+write_rds(sf_origin, path_dt_mapped_origin)
 
 sf_dest <- map_points_on_road_network(sf_points = sf_dest, buffer_size = 50)
-write_rds(sf_dest, path_sf_mapped_dest)
+write_rds(sf_dest, path_dt_mapped_dest)
 

@@ -43,6 +43,13 @@ library(igraph)
 library(sfnetworks)
 library(plyr)
 library(sp)
+# install.packages("shp2graph")
+library(devtools)
+# install_github("cran/shp2graph")
+# install_github("cran/maptools")
+library(shp2graph)
+# install.packages("maptools")
+library(maptools)
 ################################################################################
 # Paths
 ################################################################################
@@ -133,12 +140,20 @@ path_dt_clustered_tier_berlin_05_12 <-
 path_dt_distance_matrix <- here::here(path_processed_data_8, "dist_mat.rds")
 
 
-path_sf_mapped_origin <- here::here(path_processed_data_9, "mapped_origin.rds")
-path_sf_mapped_dest <- here::here(path_processed_data_9, "mapped_dest.rds")
+path_dt_mapped_origin <- here::here(path_processed_data_9, "mapped_origin.rds")
+path_dt_mapped_dest <- here::here(path_processed_data_9, "mapped_dest.rds")
 
 # External data
 path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
-path_shp_file_köln_strassen <- here::here(path_external_data, "shp/köln/Strasse.shp")
+path_shp_file_köln_strassen <-
+	here::here(path_external_data, "shp/köln/gis_osm_roads_free_1.shp")
+
+path_csv_cologne_shortest_paths <-
+	here::here(path_external_data,
+						 "shp/köln/combined_shortest_paths_202311091616.csv")
+
+path_shp_file_köln_strassen_small <-
+	here::here(path_external_data, "shp/köln/Strasse.shp")
 # Output
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
