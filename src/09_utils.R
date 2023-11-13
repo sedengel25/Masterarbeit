@@ -3,100 +3,109 @@
 # Master Thesis
 # This file contains all functions to execute 09_snn_map_odpoints_on_network.R
 #############################################################################
-# Documentation: transform_num_to_WGS84_to_UTM32
-# Usage: transform_num_to_WGS84_to_UTM32(dt, coords)
-# Description: Transforms num-coords of dt into utm32
-# Args/Options: dt, coords
-# Returns: sf_object
+# Documentation: create_df_od_points_dist_to_intersections
+# Usage: create_df_od_points_dist_to_intersections(sf_points)
+# Description: Gets distances of OD-points to closest start & end of roadsegment
+# Args/Options: sf_points
+# Returns: dataframe
 # Output: ...
-# Action: ...
-transform_num_to_WGS84_to_UTM32 <- function(dt, coords) {
-	sp_points <- SpatialPoints(coords = dt[,..coords],
-														 proj4string = CRS("+proj=longlat +datum=WGS84"))
+create_df_od_points_dist_to_intersections <- function(sf_points) {
 	
-	# Transform to UTM Zone 32N
-	sp_utm32 <- spTransform(sp_points, CRS("+proj=utm +zone=32 +datum=WGS84"))
+	df <- data.frame(
+		id = integer(),
+		edge_start = integer(),
+		edge_end = integer(),
+		dist_start = numeric(),
+		dist_end = numeric()
+	)
 	
-	# Convert back to an sf object
-	sf_points <- st_as_sf(sp_utm32)
-	
-	
-	return(sf_points)
-}
-
-
-# Documentation: map_points_on_road_network
-# Usage: map_points_on_road_network(sf_points, buffer_size)
-# Description: Maps points on road network
-# Args/Options: sf_points, buffer_size (m)
-# Returns: ...
-# Output: ...
-# Action: Overwrites sf-object
-map_points_on_road_network <- function(sf_points, buffer_size) {
-	pb <- txtProgressBar(min = 0, max = nrow(sf_points), style = 3)
 	for(i in 1:nrow(sf_points)){
-		# i <- 80
-		# buffer_size <- 50
-		node <- sf_points[i, "geometry"]
-		# Create a buffer such that only relevant linestrings are looked at
-		buffer <- st_buffer(node, buffer_size)
+		buffer_size <- 200
+		int_idx_ls_p_network <- integer()
 		
-		# Get all linestrings within buffer
-		intersec <- st_intersection(buffer, sf_ls)
-		
-		if (nrow(intersec) == 0) {
-			next
-		}
-		intersec <- intersec$geometry
-		# Get all unique geom types
-		geom_type_unique <- st_geometry_type(intersec) %>% unique
-		
-		
-		# If a MULTILINESTRING is contained...
-		if ("MULTILINESTRING" %in% geom_type_unique) {
+		# Set a small buffer such that not too many linestrings need to be checked...
+		#...but danger of not getting the whole road segment of the point...
+		#...therefore while-loop that increaes buffer-size if road segment not found
+		while(length(int_idx_ls_p_network) == 0){
+			origin <- sf_points[i, "geometry"]
 			
-			#... there are either MULTILINESTRINGS AND LINESTRINGS
-			if(length(geom_type_unique)>1){
-				intersec_mls <-
-					intersec[st_geometry_type(intersec) == "MULTILINESTRING"]
-				
-				intersec_ls_sub <- st_sfc(split_multiline_in_line(intersec_mls))
-				
-				intersec_ls <-
-					intersec[st_geometry_type(intersec) == "LINESTRING"]
-				
-				st_crs(intersec_ls_sub) <- st_crs(intersec_ls)
-				intersec_ls <- c(intersec_ls, intersec_ls_sub)
-
-			} else{ #... or only MULTILINESTRINGS
-				intersec_mls <-
-					intersec[st_geometry_type(intersec) == "MULTILINESTRING"]
-				
-				intersec_ls <- st_sfc(split_multiline_in_line(intersec_mls))
-			}
-
-		} else { #... if there is no MULTILINESTRING, no trafos need to be done
-			intersec_ls <- intersec
+			# Small buffer such that point definitely lies on a line
+			buffer_small <- st_buffer(origin, dist = 0.5)
+			
+			# Big buffer to reduce the number of lines to be checked
+			buffer_big <- st_buffer(origin, buffer_size)
+			
+			# Get linestring within buffer
+			linestring_sub <- st_intersection(buffer_big, sf_ls_network)
+			linestring_sub <- linestring_sub %>%
+				filter(st_geometry_type(linestring_sub)=="LINESTRING")
+			
+			# Convert to network such that road segments (separated by intersections)
+			# ...are identified
+			network_sub <- linestring_sub %>% as_sfnetwork()
+			
+			# Extract sub-networks's edges
+			linestring_network_sub <- network_sub %>%
+				activate(edges) %>%
+				as.data.table %>%
+				st_as_sf
+			st_geometry(linestring_network_sub) <- "geometry"
+			
+			# Get line-idx in sub-network that contains point
+			int_idx_ls_p <-
+				st_intersects(buffer_small, linestring_network_sub) %>% unlist
+			int_idx_ls_p <- int_idx_ls_p[1]
+			
+			# Get geometry of that line
+			linestring_with_point <- linestring_network_sub[int_idx_ls_p,]
+			
+			# Find line-index in full network
+			int_idx_ls_p_network <-
+				st_equals(sf_network_edges, linestring_with_point) %>% as.integer()
+			int_idx_ls_p_network <- which(!is.na(int_idx_ls_p_network))
+			buffer_size <- buffer_size + 100
 		}
 		
-
-
-		# Split linestrigns into points
-		intersec_pts <- st_segmentize(intersec_ls, 10)
-		intersec_pts <- st_coordinates(intersec_pts)
-		intersec_pts <- intersec_pts %>% as.data.table
-		intersec_pts <- st_as_sf(intersec_pts, coords = c("X", "Y"))
+		# Get actual line in full network
+		linestring_network_point <- sf_network_edges[int_idx_ls_p_network,]
 		
-		st_crs(intersec_pts) <- st_crs(node)
+		# Get start and end point of line as multipoint
+		mulitpoints_boundary <- st_boundary(linestring_network_point)
+		points_boundary <- st_cast(mulitpoints_boundary, "POINT")
 		
-		# Get closest point
-		closest_point <- st_distance(node, intersec_pts) %>% which.min
-		closest_point <- intersec_pts[closest_point, "geometry"]
+		# Extract start-point from multipoint
+		point_edge_start <- points_boundary %>% as.data.table
+		point_edge_start <- point_edge_start[1, "geometry"] %>% pull
 		
-		# Overwrite sf_points with point in road network
-		sf_points[i, "geometry"] <- closest_point
-		setTxtProgressBar(pb, i)
+		# Extract end-point from multipoint
+		point_edge_end <- points_boundary %>% as.data.table
+		point_edge_end <- point_edge_end[2, "geometry"] %>% pull
+		
+		# Extract start-node-id from multipoint
+		id_start <- points_boundary %>% as.data.table
+		id_start <- id_start[1, "from"] %>% pull
+		
+		# Extract end-node-id from multipoint
+		id_end <- points_boundary %>% as.data.table
+		id_end <- id_end[1, "to"] %>% pull
+		
+		dist_start <- st_distance(origin, point_edge_start) %>% as.numeric
+		dist_end <- st_distance(origin, point_edge_end) %>% as.numeric
+		
+		# ggplot() +
+		# 	geom_sf(data = sf_points[i,]) +
+		# 	geom_sf(data = linestring_network_point) +
+		# 	geom_sf(data = points_boundary)
+		
+		df[i, "id"] <- sf_points[i,] %>% as.data.table %>% select(id)
+		df[i, "edge_start"] <- id_start
+		df[i, "edge_end"] <- id_end
+		df[i, "dist_start"] <- dist_start
+		df[i, "dist_end"] <- dist_end
+		print(df)
+		if(i>3){
+			break
+		}
 	}
-	
-	return(sf_points)
+	return(df)
 }
