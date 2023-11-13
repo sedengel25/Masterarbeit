@@ -1,142 +1,87 @@
 ################################################################################
 # Big Data Analytics in Transportation (TU Dresden)
 # Master Thesis
-# This file contains all functions to execute 08_snn_create_network_dist_map.R
+# This file contains all functions to execute 08_snn_map_od_points_on_network.R
 #############################################################################
-# Documentation: create_road_nodes_df
-# Usage: create_road_nodes_df(list_sf_road_segments_ls)
-# Description: Creates a df containing all nodes of all linestrings
-# Args/Options: list_sf_road_segments_ls
-# Returns: dataframe
+# Documentation: transform_num_to_WGS84
+# Usage: transform_num_to_WGS84(dt, coords)
+# Description: Transforms num-coords of dt into wgs84
+# Args/Options: dt, coords
+# Returns: sf_object
 # Output: ...
-create_road_nodes_df <- function(list_sf_road_segments_ls) {
-	dt_nodes <- data.frame(
-		id = integer(),
-		x_coord = numeric(),
-		y_coord = numeric()
-	)
+# Action: ...
+transform_num_to_WGS84 <- function(dt, coords) {
+	sp_points <- SpatialPoints(coords = dt[,..coords],
+														 proj4string = CRS("+proj=longlat +datum=WGS84"))
 	
-	idx <- 1
-	for(i in 1:length(list_sf_road_segments_ls)){
-
-		sf_point <- st_cast(list_sf_road_segments_ls[[i]], "POINT")
-		
-		x_coord <- sf_point[1]
-		y_coord <- sf_point[2]
-		id <- idx
-		dt_nodes[idx, "id"] = id
-		dt_nodes[idx, "x_coord"] = x_coord
-		dt_nodes[idx, "y_coord"] = y_coord
-		
-		idx <- idx + 1
-		
-		
-		sf_point <- st_cast(st_reverse(list_sf_road_segments_ls[[i]]), "POINT")
-		
-		x_coord <- sf_point[1]
-		y_coord <- sf_point[2]
-		id <- idx
-		dt_nodes[idx, "id"] = id
-		dt_nodes[idx, "x_coord"] = x_coord
-		dt_nodes[idx, "y_coord"] = y_coord
-
-		idx <- idx + 1
-	}
+	# Transform to UTM Zone 32N
+	# sp_utm32 <- spTransform(sp_points, CRS("+proj=utm +zone=32 +datum=WGS84"))
 	
-	return(dt_nodes)
+	# Convert back to an sf object
+	sf_points <- st_as_sf(sp_points)
+	
+	
+	return(sf_points)
 }
 
 
-
-# Documentation: create_dist_mat
-# Usage: create_dist_mat(nodes, buffer_size)
-# Description: Creates dist mat based on sub-matrices for each buffer-network
-# Args/Options: nodes, buffer_size (m)
-# Returns: list
+# Documentation: map_points_on_road_network
+# Usage: map_points_on_road_network(sf_points, buffer_size)
+# Description: Maps points on road network
+# Args/Options: sf_points, buffer_size (m)
+# Returns: sf
 # Output: ...
-create_dist_mat <- function(edges, buffer_size, sf_ls) {
+# Action: ...
+map_points_on_road_network <- function(sf_points, sf_linestrings) {
+	pb <- txtProgressBar(min = 0, max = nrow(sf_points), style = 3)
+	for(i in 1:nrow(sf_points)){
+		print(i)
+		# i <- 667
+		buffer_size <- 50
+		# sf_linestrings <- sf_edges
+		sf_points <- sf_origin
+		
+		sf_point <- sf_points[i, "geometry"]
 
-	list_of_dts <- list()
-	pb <- txtProgressBar(min = 0, max = nrow(edges), style = 3)
+		sf_buffer <- st_buffer(sf_point, dist = buffer_size)
 
-	# Loop through each node of the network
-	for(i in 1:nrow(edges)){
-		# i <- 1
-		# buffer_size <- 1000
-		edge <- edges[i,]
-		print(edge)
-		# Create a buffer
-		buffer <- st_buffer(edge, buffer_size)
-		print(buffer)
-		# Get all linestrings within buffer
-		intersec_ls <- st_intersection(buffer, sf_ls)
-		print(intersec_ls)
-		# Create sub-network based on linestrings within the buffer
-		sub_network <- as_sfnetwork(intersec_ls$x)
+		sf_intersections <- st_intersection(sf_buffer, sf_linestrings)
 		
-		# Extract network's nodes
-		# nodes_sub_network <- sub_network %>%
-		# 	as.data.table
-
-		
-		# Extract network's edges
-		edges_sub_network <- sub_network %>%
-			activate(edges) %>%
-			as.data.table %>%
-			st_as_sf
-		
-		print(edges_sub_network)
-		# We compare the ls found in the sub-net with the whole net to ensure that ...
-		# ... only full ls and not cuttet ls (due to buffer) are used and ...
-		# ... the ids of the points are the same (vs. starting at 1 in each sub-net)
-		
-		# Second problem: If a LS is only partly in buffer we loose a street
-		same_edges <- st_equals(edges, edges_sub_network) %>% as.integer()
-		same_edges <- which(!is.na(same_edges))
-		edges_sub_network <- edges[same_edges,]
-		
-
-		
-
-		if(nrow(edges_sub_network)==0){
-			next
+		while(nrow(sf_intersections) == 0){
+			buffer_size <- buffer_size + 50
+			sf_buffer <- st_buffer(sf_point, dist = buffer_size)
+			sf_intersections <- st_intersection(sf_buffer, sf_linestrings)
 		}
 		
-		# Get length of network's edges
-		num_edges_weight <- edges_sub_network %>% st_length
+		int_idx_mls <- which(st_geometry_type(sf_intersections) == "MULTILINESTRING")
 		
-		# Create an igraph
-		g <- graph_from_data_frame(
-			data.frame(
-				from = edges_sub_network$from,
-				to = edges_sub_network$to,
-				weight = num_edges_weight
-			)
-		)
-		g <- as.undirected(g)
-		
+		if(length(int_idx_mls) > 0){
+			sf_intersec_ls <- sf_intersections[-int_idx_mls,]
+			sf_intersec_mls <- sf_intersections[int_idx_mls,]
+			sf_intersec_ls_2 <- st_cast(sf_intersec_mls, "LINESTRING")
 
-		# Get shortest paths between all nodes contained in the network
-		mat_shortest_path <- shortest.paths(g, v=V(g), to=V(g))
-		mat_shortest_path[is.infinite(mat_shortest_path)] <- NA
-		
-		
-		
-		mat_df <- as.data.frame(mat_shortest_path)
-		mat_df$from <- rownames(mat_df)
-		mat_dt <- mat_df %>%
-			pivot_longer(cols = -from, names_to = "to", values_to = "distance") %>%
-			filter(!is.na(distance)) %>%
-			as.data.table
+			sf_intersections <- rbind(sf_intersec_ls, sf_intersec_ls_2)
+		}
 
-		mat_dt <- mat_dt %>%
-			filter(from < to)
+		sf_intersec_lines_as_multipt <- st_line_sample(sf_intersections, n = 10)
+
+		sf_intersec_lines_as_pt <- st_cast(sf_intersec_lines_as_multipt, "POINT")
+
+		int_idx_closest_point <- st_distance(sf_point, sf_intersec_lines_as_pt) %>% which.min
+		int_idx_closest_point <- int_idx_closest_point[1]
+		geom_closest_point <- sf_intersec_lines_as_pt[int_idx_closest_point] %>% st_as_sf
 		
-		print(mat_dt)
-		list_of_dts[[i]] <- mat_dt
-		setTxtProgressBar(pb, i)
+		# ggplot() +
+		# 	geom_sf(data = sf_buffer) +
+		# 	geom_sf(data = sf_intersections) +
+		# 	geom_sf(data = sf_point, aes(color = "red")) +
+		# 	geom_sf(data = geom_closest_point, aes(color = "green"))
 		
+		# Overwrite sf_points with point in road network
+		sf_points[i, "geometry"] <- geom_closest_point
+		
+		# setTxtProgressBar(pb, i)
 	}
-	return(list_of_dts)
+	
+	return(sf_points)
 }
-
