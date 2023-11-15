@@ -108,43 +108,49 @@ transform_num_to_WGS84 <- function(dt, coords) {
 # Output: ...
 # Action: ...
 map_points_on_road_network <- function(sf_points, sf_linestrings) {
-	pb <- txtProgressBar(min = 0, max = nrow(sf_points), style = 3)
+	# pb <- txtProgressBar(min = 0, max = nrow(sf_points), style = 3)
+
 	for(i in 1:nrow(sf_points)){
 		print(i)
-		# i <- 667
-		buffer_size <- 50
+		buffer_size <- 25
+		# i <- 600
 		# sf_linestrings <- sf_edges
-		sf_points <- sf_origin
-		
+		# sf_points <- sf_origin
 		sf_point <- sf_points[i, "geometry"]
 
 		sf_buffer <- st_buffer(sf_point, dist = buffer_size)
 
-		sf_intersections <- st_intersection(sf_buffer, sf_linestrings)
+
 		
-		while(nrow(sf_intersections) == 0){
-			buffer_size <- buffer_size + 50
+		### Map OD-points on road-network ------------------------------------------
+		int_idx_intersections <- st_intersects(sf_buffer, sf_linestrings) %>% unlist
+		sf_intersections <- sf_linestrings[int_idx_intersections,]
+		
+		
+		while(nrow(sf_intersections) == 0 && buffer_size < 50){
+			print("increase buffer by 25")
+			buffer_size <- buffer_size + 25
 			sf_buffer <- st_buffer(sf_point, dist = buffer_size)
-			sf_intersections <- st_intersection(sf_buffer, sf_linestrings)
+			int_idx_intersections <- st_intersects(sf_buffer, sf_linestrings) %>% unlist
+			sf_intersections <- sf_linestrings[int_idx_intersections,]
 		}
 		
-		int_idx_mls <- which(st_geometry_type(sf_intersections) == "MULTILINESTRING")
-		
-		if(length(int_idx_mls) > 0){
-			sf_intersec_ls <- sf_intersections[-int_idx_mls,]
-			sf_intersec_mls <- sf_intersections[int_idx_mls,]
-			sf_intersec_ls_2 <- st_cast(sf_intersec_mls, "LINESTRING")
-
-			sf_intersections <- rbind(sf_intersec_ls, sf_intersec_ls_2)
+		if(nrow(sf_intersections) == 0){
+			print("no near street")
+			sf_points[i, "note"] <- "not_mapped"
+			next
 		}
 
 		sf_intersec_lines_as_multipt <- st_line_sample(sf_intersections, n = 10)
 
 		sf_intersec_lines_as_pt <- st_cast(sf_intersec_lines_as_multipt, "POINT")
 
-		int_idx_closest_point <- st_distance(sf_point, sf_intersec_lines_as_pt) %>% which.min
+		int_idx_closest_point <- st_distance(sf_point, sf_intersec_lines_as_pt) %>% 
+			which.min
 		int_idx_closest_point <- int_idx_closest_point[1]
-		geom_closest_point <- sf_intersec_lines_as_pt[int_idx_closest_point] %>% st_as_sf
+		
+		geom_closest_point <- sf_intersec_lines_as_pt[int_idx_closest_point] %>% 
+			st_as_sf
 		
 		# ggplot() +
 		# 	geom_sf(data = sf_buffer) +
@@ -154,6 +160,36 @@ map_points_on_road_network <- function(sf_points, sf_linestrings) {
 		
 		# Overwrite sf_points with point in road network
 		sf_points[i, "geometry"] <- geom_closest_point
+		
+		
+		### Get dist to start- & end-node of road segment --------------------------
+		geom_closest_point_buffer <- st_buffer(geom_closest_point, 1)
+		
+		int_idx_line_with_point <-
+			st_intersects(geom_closest_point_buffer, sf_intersections) %>% unlist
+		
+		sf_line_with_point <- sf_intersections[int_idx_line_with_point,]
+		
+		# Get start and end point of line as multipoint
+		mulitpoints_boundary <- st_boundary(sf_line_with_point)
+		points_boundary <- st_cast(mulitpoints_boundary, "POINT")
+		
+
+		# Extract start-point from multipoint
+		point_edge_start <- points_boundary[1, "geometry"]
+		
+		# Extract end-point from multipoint
+		point_edge_end <- points_boundary[2, "geometry"]
+		
+
+		dist_start <-
+			st_distance(geom_closest_point, point_edge_start) %>% as.numeric
+		
+		dist_end <-
+			st_distance(geom_closest_point, point_edge_end) %>% as.numeric
+		
+		sf_points[i, "dist_to_from"] <- dist_start
+		sf_points[i, "dist_to_to"] <- dist_end
 		
 		# setTxtProgressBar(pb, i)
 	}

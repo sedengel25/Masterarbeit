@@ -7,10 +7,8 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/09_utils.R")
 
-# Read local node distance matrix (shortest paths between node 1 and all others)
-dt_shortest_paths <- read_rds("dt_shortest_paths.rds")
-
-sf_network <- dt_to_sf_network(dt = dt_shortest_paths)
+# Read in sf_network
+sf_network <- read_rds(path_sf_network_colgone)
 
 sf_nodes <- extract_nodes_from_sf_network(sf_network = sf_network)
 
@@ -52,7 +50,10 @@ sf_origin <- st_transform(sf_origin, crs = 32632)
 sf_dest <- st_transform(sf_dest, crs = 32632)
 
 
-
+sf_origin <- sf_origin %>%
+	mutate(note = "-",
+				 dist_to_from = -1,
+				 dist_to_to = -1)
 
 sf_origin <- map_points_on_road_network(sf_points = sf_origin, 
 																				sf_linestrings = sf_edges)

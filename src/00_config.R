@@ -43,13 +43,7 @@ library(igraph)
 library(sfnetworks)
 library(plyr)
 library(sp)
-# install.packages("shp2graph")
-library(devtools)
-# install_github("cran/shp2graph")
-# install_github("cran/maptools")
-library(shp2graph)
-# install.packages("maptools")
-library(maptools)
+library(RPostgres)
 ################################################################################
 # Paths
 ################################################################################
@@ -137,8 +131,13 @@ path_dt_clustered_voi_cologne_06_05 <-
 path_dt_clustered_tier_berlin_05_12 <-
 	here::here(path_processed_data_6, "dt_clustered_tier_berlin_05_12.rds")
 
-path_sf_origin <- here::here(path_processed_data_8, "sf_origin.rds")
-path_sf_dest <- here::here(path_processed_data_8, "sf_dest.rds")
+
+path_sf_network_colgone <-
+	here::here(path_processed_data_8, "sf_network_cologne.rds")
+
+
+path_sf_origin <- here::here(path_processed_data_9, "sf_origin.rds")
+path_sf_dest <- here::here(path_processed_data_9, "sf_dest.rds")
 
 
 
