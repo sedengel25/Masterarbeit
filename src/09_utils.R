@@ -57,47 +57,8 @@ extract_edges_from_sf_network <- function(sf_network) {
 
 
 
-# Documentation: get_cleaned_trip_data
-# Usage: get_cleaned_trip_data(path_clean, path_org)
-# Description: Combines the dt with ride & id of clean trips with org. data
-# Args/Options: path_clean, path_org
-# Returns: dt
-# Output: ...
-# Action: ...
-get_cleaned_trip_data <- function(path_clean, path_org) {
-	# Read in clean scooter trip data (only 'id' and 'ride)
-	dt_clean <- read_rds(path_clean)
-	
-	# Read in full original data
-	dt_org <- read_rds(path_org)
-	
-	# Merge at 'id' and 'ride'
-	dt <- dt_clean %>%
-		inner_join(dt_org, c("id", "ride"))
-	
-	return(dt)
-}
 
-# Documentation: transform_num_to_WGS84
-# Usage: transform_num_to_WGS84(dt, coords)
-# Description: Transforms num-coords of dt into wgs84
-# Args/Options: dt, coords
-# Returns: sf_object
-# Output: ...
-# Action: ...
-transform_num_to_WGS84 <- function(dt, coords) {
-	sp_points <- SpatialPoints(coords = dt[,..coords],
-														 proj4string = CRS("+proj=longlat +datum=WGS84"))
-	
-	# Transform to UTM Zone 32N
-	# sp_utm32 <- spTransform(sp_points, CRS("+proj=utm +zone=32 +datum=WGS84"))
-	
-	# Convert back to an sf object
-	sf_points <- st_as_sf(sp_points)
-	
-	
-	return(sf_points)
-}
+
 
 
 # Documentation: map_points_on_road_network
