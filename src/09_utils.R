@@ -3,157 +3,173 @@
 # Master Thesis
 # This file contains all functions to execute 09_snn_map_od_points_on_network.R
 #############################################################################
-# Documentation: dt_to_sf_network
-# Usage: dt_to_sf_network(dt)
-# Description: Transforms the shortest_path-csv from DBeaver into sf_network
-# Args/Options: dt
-# Returns: sf_network
+# Documentation: change_geometry_type
+# Usage: change_geometry_type(con, table_osm2po, crs)
+# Description: Change types of geometry-col of table considered
+# Args/Options: con, table_osm2po, crs
+# Returns: ...
 # Output: ...
-# Action: ...
-dt_to_sf_network <- function(dt) {
-	sf_network <- dt %>% 
-		select(geom_edge) %>% 
-		dplyr::rename(geometry = geom_edge) %>% 
-		st_as_sf %>% 
-		as_sfnetwork()
+# Action: Change types of geometry-col of table considered
+change_geometry_type <- function(con, table_osm2po, crs) {
+  # Bring geometry-column of line-table and point-table to the same name
+	query <- paste0("ALTER TABLE ", 
+									table_osm2po,
+									" RENAME COLUMN geom_way TO geometry;")
 	
-	return(sf_network)
-}
+  dbExecute(con, query)
+  
+  
+  # Bring line-table and point-table to the same crs
+  query <- paste0("ALTER TABLE ", 
+  table_osm2po, 
+  " ALTER COLUMN geometry TYPE geometry(LINESTRING, ",
+  crs, 
+  ") USING ST_Transform(geometry, ", crs, ");")
 
-
-# Documentation: extract_nodes_from_sf_network
-# Usage: extract_nodes_from_sf_network(sf_network)
-# Description: Extracts nodes from sf_network and returns them as sf-object
-# Args/Options: sf_network
-# Returns: sf-object
-# Output: ...
-# Action: ...
-extract_nodes_from_sf_network <- function(sf_network) {
-	sf_nodes <- sf_network %>%
-		as.data.table %>%
-		st_as_sf
-	
-	sf_nodes <- sf_nodes %>%
-		mutate(id = 1:nrow(sf_nodes))
-	
-	return(sf_nodes)
-}
-
-# Documentation: extract_edges_from_sf_network
-# Usage: extract_edges_from_sf_network(sf_network)
-# Description: Extracts edges from sf_network and returns them as sf-object
-# Args/Options: sf_network
-# Returns: sf-object
-# Output: ...
-# Action: ...
-extract_edges_from_sf_network <- function(sf_network) {
-	sf_edges <- sf_network %>%
-		activate(edges) %>%
-		as.data.table %>%
-		st_as_sf
-	
-	return(sf_edges)
+  dbExecute(con, query)
 }
 
 
 
-
-
-
-
-# Documentation: map_points_on_road_network
-# Usage: map_points_on_road_network(sf_points, buffer_size)
-# Description: Maps points on road network
-# Args/Options: sf_points, buffer_size (m)
-# Returns: sf
+# Documentation: create_spatial_indices
+# Usage: create_spatial_indices(con, table_osm2po, o_table, d_table)
+# Description: Create geometry-index for all tables involved
+# Args/Options: con, table_osm2po, o_table, d_table
+# Returns: ...
 # Output: ...
-# Action: ...
-map_points_on_road_network <- function(sf_points, sf_linestrings) {
-	# pb <- txtProgressBar(min = 0, max = nrow(sf_points), style = 3)
+# Action: Create geometry-index for all tables involved
+create_spatial_indices <- function(con, table_osm2po, o_table, d_table) {
 
-	for(i in 1:nrow(sf_points)){
-		print(i)
-		buffer_size <- 25
-		# i <- 600
-		# sf_linestrings <- sf_edges
-		# sf_points <- sf_origin
-		sf_point <- sf_points[i, "geometry"]
+	query <- paste0("CREATE INDEX ON ",  table_osm2po, " USING GIST (geometry);")
+  dbExecute(con, query)
+  
+  query <- paste0("CREATE INDEX ON ",  o_table, " USING GIST (geometry);")
+  dbExecute(con, query)
+  
+  query <- paste0("CREATE INDEX ON ",  d_table, " USING GIST (geometry);")
+  dbExecute(con, query)
+  
+}
 
-		sf_buffer <- st_buffer(sf_point, dist = buffer_size)
+
+# Documentation: get_sub_street_network
+# Usage: get_sub_street_network(con, o_table, d_table, city_prefix)
+# Description: Gets bbox of all OD-points and subsets network accordingly
+# Args/Options: con, o_table, d_table, city_prefix
+# Returns: ...
+# Output: ...
+# Action: creates new reduced PostgreSQL-table
+get_sub_street_network <- function(con,
+																	 o_table,
+																	 d_table,
+																	 table_osm2po,
+																	 table_osm2po_subset) {
+		
+	# Drop the existing bbox temp table if it exists
+	dbExecute(con, "DROP TABLE IF EXISTS bbox_geom;")
+
+	# Calculate the bounding box with the correct SRID
+	query <- paste0("WITH points AS (SELECT geometry FROM ", o_table, 
+	" UNION ALL SELECT geometry FROM ", 
+	d_table, 
+	"), bbox AS (SELECT ST_SetSRID(ST_Extent(geometry), 32632) as geom FROM points)",
+	" SELECT * INTO TEMP bbox_geom FROM bbox;")
+	dbExecute(con, query)
+	
+	# Create a new subset table after dropping the old one if it exists
+	query <- paste("DROP TABLE IF EXISTS", table_osm2po_subset)
+	dbExecute(con, query)
+	
+	query <- paste0("CREATE TABLE ", table_osm2po_subset, " AS SELECT * FROM ", 
+								 table_osm2po, " WHERE ST_Intersects(", table_osm2po, 
+								 ".geometry, (SELECT geom FROM bbox_geom));")
+	dbExecute(con, query)
+	
+	# Create spatial index
+	query <- paste0("CREATE INDEX ON ",  table_osm2po_subset, " USING GIST (geometry);")
+	dbExecute(con, query)
+}
 
 
-		
-		### Map OD-points on road-network ------------------------------------------
-		int_idx_intersections <- st_intersects(sf_buffer, sf_linestrings) %>% unlist
-		sf_intersections <- sf_linestrings[int_idx_intersections,]
-		
-		
-		while(nrow(sf_intersections) == 0 && buffer_size < 50){
-			print("increase buffer by 25")
-			buffer_size <- buffer_size + 25
-			sf_buffer <- st_buffer(sf_point, dist = buffer_size)
-			int_idx_intersections <- st_intersects(sf_buffer, sf_linestrings) %>% unlist
-			sf_intersections <- sf_linestrings[int_idx_intersections,]
-		}
-		
-		if(nrow(sf_intersections) == 0){
-			print("no near street")
-			sf_points[i, "note"] <- "not_mapped"
-			next
-		}
 
-		sf_intersec_lines_as_multipt <- st_line_sample(sf_intersections, n = 10)
+# move_postgis_to_schema <- function(con, schema) {
+# 	dbExecute(con, "UPDATE pg_extension SET extrelocatable = true WHERE extname = 'postgis';")
+# 	dbExecute(con, paste0("ALTER EXTENSION postgis SET SCHEMA ", schema))
+# }
 
-		sf_intersec_lines_as_pt <- st_cast(sf_intersec_lines_as_multipt, "POINT")
+# Documentation: map_od_points_to_network
+# Usage: map_od_points_to_network(con, table_mapped_points,
+# char_od_table, table_osm2po_subset)
+# Description: Gets bbox of all OD-points and subsets network accordingly
+# Args/Options: con, table_mapped_points, char_od_table, table_osm2po_subset
+# Returns: ...
+# Output: ...
+# Action: maps OD-points onto street network
+map_od_points_to_network <- function(con,
+																		 table_mapped_points,
+																		 char_od_table,
+																		 table_osm2po_subset) {
+	
+	# Map origin points
+	query <- paste0("DROP TABLE IF EXISTS ", table_mapped_points, ";")
+	dbExecute(con, query)
+	
+	query <- paste0("CREATE TABLE ", table_mapped_points, " AS SELECT
+    point.id,
+    line.id AS line_id,
+    ST_ClosestPoint(line.geometry, point.geometry) AS closest_point_on_line,
+    ST_Distance(line.geometry, point.geometry) AS distance_to_line,
+    ST_Distance(ST_StartPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_start,
+    ST_Distance(ST_EndPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_end
+  FROM ", char_od_table, " AS point CROSS JOIN LATERAL
+    (SELECT id, geometry
+     FROM ",  table_osm2po_subset, "
+     ORDER BY geometry <-> point.geometry
+     LIMIT 1) AS line;
+  ")
+	cat(query)
+	dbExecute(con, query)
+}
 
-		int_idx_closest_point <- st_distance(sf_point, sf_intersec_lines_as_pt) %>% 
-			which.min
-		int_idx_closest_point <- int_idx_closest_point[1]
-		
-		geom_closest_point <- sf_intersec_lines_as_pt[int_idx_closest_point] %>% 
-			st_as_sf
-		
-		# ggplot() +
-		# 	geom_sf(data = sf_buffer) +
-		# 	geom_sf(data = sf_intersections) +
-		# 	geom_sf(data = sf_point, aes(color = "red")) +
-		# 	geom_sf(data = geom_closest_point, aes(color = "green"))
-		
-		# Overwrite sf_points with point in road network
-		sf_points[i, "geometry"] <- geom_closest_point
-		
-		
-		### Get dist to start- & end-node of road segment --------------------------
-		geom_closest_point_buffer <- st_buffer(geom_closest_point, 1)
-		
-		int_idx_line_with_point <-
-			st_intersects(geom_closest_point_buffer, sf_intersections) %>% unlist
-		
-		sf_line_with_point <- sf_intersections[int_idx_line_with_point,]
-		
-		# Get start and end point of line as multipoint
-		mulitpoints_boundary <- st_boundary(sf_line_with_point)
-		points_boundary <- st_cast(mulitpoints_boundary, "POINT")
-		
 
-		# Extract start-point from multipoint
-		point_edge_start <- points_boundary[1, "geometry"]
-		
-		# Extract end-point from multipoint
-		point_edge_end <- points_boundary[2, "geometry"]
-		
 
-		dist_start <-
-			st_distance(geom_closest_point, point_edge_start) %>% as.numeric
-		
-		dist_end <-
-			st_distance(geom_closest_point, point_edge_end) %>% as.numeric
-		
-		sf_points[i, "dist_to_from"] <- dist_start
-		sf_points[i, "dist_to_to"] <- dist_end
-		
-		# setTxtProgressBar(pb, i)
+all_to_all_shortest_paths_to_sqldb <- function(con, dt, g, buffer) {
+	
+	dt_dist_mat <- data.table(
+		source = integer(),
+		target = integer(),
+		m = numeric()
+	)
+	
+	# Create empty table for OD-matrix of local nodes
+	if (dbExistsTable(con, "distance_matrix")) {
+		dbRemoveTable(con, "distance_matrix")
+		dbWriteTable(con, 'distance_matrix', dt_dist_mat)
+	} else {
+		dbWriteTable(con, 'distance_matrix', dt_dist_mat)
 	}
 	
-	return(sf_points)
+	pb <- txtProgressBar(min = 0, max = nrow(dt), style = 3)
+	i <- 1
+	for (source in dt$source){
+		# Compute the shortest path and length from the source to every other node
+		res = single_source_dijkstra(g, source, weight = "m", cutoff = buffer)
+		res = res[[1]] %>% unlist
+		
+		targets = names(res) %>% as.integer
+		sources = rep(source, length(targets))
+		distances = res %>% as.numeric
+		dt_append <- data.table(
+			source = sources,
+			target = targets,
+			m = distances
+		)
+		RPostgres::dbAppendTable(conn = con,
+														 name = "distance_matrix",
+														 value = dt_append
+		)
+		i <- i +1
+		setTxtProgressBar(pb, i)
+	}
 }
+

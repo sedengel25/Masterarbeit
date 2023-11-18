@@ -100,3 +100,22 @@ transform_num_to_WGS84 <- function(dt, coords) {
 	
 	return(sf_points)
 }
+
+# Documentation: connect_to_postgresql_db
+# Usage: connect_to_postgresql_db(user, pw, dbname, host)
+# Description: Creates connection to PostgreSQL-DB
+# Args/Options: user, pw, dbname, host
+# Returns: DB-Connection
+# Output: ...
+# Action: ...
+connect_to_postgresql_db <- function(user, pw, dbname, host) {
+	# Create a connection to the PostgreSQL database
+	drv <- RPostgres::Postgres()
+	con <- dbConnect(drv, 
+									 dbname = dbname, 
+									 host = host, 
+									 user = user, 
+									 password = pw,
+									 port = 5432)
+	return(con)
+}

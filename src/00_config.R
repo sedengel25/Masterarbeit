@@ -44,6 +44,8 @@ library(sfnetworks)
 library(plyr)
 library(sp)
 library(RPostgres)
+library(reticulate)
+library(purrr)
 ################################################################################
 # Paths
 ################################################################################
@@ -142,16 +144,19 @@ path_sf_dest <- here::here(path_processed_data_9, "sf_dest.rds")
 
 
 # External data
-path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
-path_shp_file_köln_strassen <-
-	here::here(path_external_data, "shp/köln/gis_osm_roads_free_1.shp")
+# path_shp_file_berlin <- here::here(path_external_data, "shp/berlin/bezirksgrenzen.shp")
+# path_shp_file_köln_strassen <-
+# 	here::here(path_external_data, "shp/köln/gis_osm_roads_free_1.shp")
+# 
+# path_csv_cologne_shortest_paths <-
+# 	here::here(path_external_data,
+# 						 "shp/köln/combined_shortest_paths_202311091616.csv")
+# 
+# path_shp_file_köln_strassen_small <-
+# 	here::here(path_external_data, "shp/köln/Strasse.shp")
+path_osm2po <- "C:/osm2po-5.5.5"
 
-path_csv_cologne_shortest_paths <-
-	here::here(path_external_data,
-						 "shp/köln/combined_shortest_paths_202311091616.csv")
-
-path_shp_file_köln_strassen_small <-
-	here::here(path_external_data, "shp/köln/Strasse.shp")
+path_psql <- "C:/Program Files/PostgreSQL/16/bin/psql.exe"
 # Output
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
