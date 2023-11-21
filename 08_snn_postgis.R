@@ -5,13 +5,11 @@
 ################################################################################
 source("./src/00_config.R")
 source("./src/00_utils.R")
-source("./src/09_utils.R")
+source("./src/00_config_psql.R")
+source("./src/08_utils.R")
 
 dt <- get_cleaned_trip_data(path_clean = path_dt_clustered_voi_cologne_06_05,
 														path_org = path_dt_voi_cologne_06_05)
-
-
-
 
 
 dt <- dt %>%
@@ -63,17 +61,6 @@ sf_dest <- st_transform(sf_dest, crs = int_crs)
 ################################################################################
 # osm2po, PostgreSQL & PostGIS
 ################################################################################
-# Configure connection to PostgreSQL database
-user <- "postgres"
-pw <- "Wurstsalat1996"
-dbname <- "snn"
-host <- "localhost" 
-port <- "5432"
-con <- connect_to_postgresql_db(user = user,
-																pw = pw,
-																dbname = dbname,
-																host = host)
-
 # List executable .bat-files from osm2po
 list.files(path_osm2po, pattern = "*.bat")
 char_bat_file <- "cologne.bat"
@@ -82,8 +69,6 @@ char_city_prefix <- char_city_prefix[[1]][5] %>% strsplit("=")
 char_city_prefix <- char_city_prefix[[1]][2]
 
 # Exectung the bat-file of the chosen city creates a sql file with all edges
-# of the street network in the newly created folder 'ber', 'mun', 'col' or 'hh'
-# Use paste to construct the command
 cmd_osm2po <- paste('cmd /c "cd /d', path_osm2po, '&&', char_bat_file, '"')
 system(cmd_osm2po)
 
@@ -94,19 +79,15 @@ sql_file <- paste0(path_osm2po, "/", char_city_prefix, "/", sql_filename)
 Sys.setenv(PGPASSWORD = pw)
 cmd_psql <- sprintf('"%s" -h %s -p %s -d %s -U %s -f "%s"', 
 										path_psql, host, port, dbname, user, sql_file)
-
-
-# dbExecute(con, "CREATE EXTENSION postgis;")
 system(cmd_psql)
 Sys.unsetenv("PGPASSWORD")
 
 
-# Reduce the streetwork to the necessary bounding box of OD-points
+### Reduce the streetwork to the necessary bounding box of OD-points -----------
 char_o_table <- paste0(char_city_prefix, "_o_points_", char_pow_tod)
 char_d_table <- paste0(char_city_prefix, "_d_points_", char_pow_tod)
-# 1. Create point-table for origin- & destination-points if not already exist
 
-# O-points
+# Create table for Origin-Points
 if (dbExistsTable(con, paste0(char_o_table))) {
 	dbRemoveTable(con, paste0(char_o_table))
 	dbWriteTable(con, paste0(char_o_table), sf_origin)
@@ -114,26 +95,30 @@ if (dbExistsTable(con, paste0(char_o_table))) {
 	dbWriteTable(con, paste0(char_o_table), sf_origin)
 }
 
-# D-points
+# Create table for Destination-Points
 if (dbExistsTable(con, paste0(char_d_table))) {
 	dbRemoveTable(con,  paste0(char_d_table))
-	dbWriteTable(con,  paste0(char_d_table), sf_origin)
+	dbWriteTable(con,  paste0(char_d_table), sf_dest)
 } else {
-	dbWriteTable(con,  paste0(char_d_table), sf_origin)
+	dbWriteTable(con,  paste0(char_d_table), sf_dest)
 }
 
+# Create variable table-names depending on the city
 table_osm2po <- paste0(char_city_prefix, "_2po_4pgr")
 table_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
 
+# Bring street-network-data to the same CRS as OD-points
 change_geometry_type(con = con,
 										 table_osm2po = table_osm2po,
 										 crs = int_crs)
 
+# Create  spatial indices to speed up calculations
 create_spatial_indices(con = con,
 											 table_osm2po = table_osm2po,
 											 o_table = char_o_table,
 											 d_table = char_d_table)
 
+# Get sub street network by reducing network to area needed to cover OD-points
 get_sub_street_network(con = con,
 											 o_table = char_o_table,
 											 d_table = char_d_table,
@@ -141,14 +126,15 @@ get_sub_street_network(con = con,
 											 table_osm2po_subset = table_osm2po_subset
 											 )
 
-# Create spatial index
+# Create spatial index for sub street network
 query <- paste0("CREATE INDEX ON ",  table_osm2po_subset, " USING GIST (geometry);")
 dbExecute(con, query)
 
-
-
+### Map OD-points onto the street network --------------------------------------
+# Create variable table-names depending on the city for the mapped OD-points
 table_mapped_o_points <- paste0(char_city_prefix, "_mapped_o_points")
 table_mapped_d_points <- paste0(char_city_prefix, "_mapped_d_points")
+
 
 # Map Origin
 map_od_points_to_network(con = con, 
@@ -162,22 +148,29 @@ map_od_points_to_network(con = con,
 												 table_osm2po_subset = table_osm2po_subset)
 
 
-# Calculate Local Node Distance Matrix
+### Calculate Local Node Distance Matrix ---------------------------------------
+# Read sub street network from psql-server
 dt <- RPostgres::dbReadTable(con, "col_2po_4pgr_subset") %>%
 	mutate(m = km*1000) %>%
 	select(id, source, target, m) 
 
-head(dt)
-
-
-# install_miniconda()
+# Connect to miniconda to execute Python code
 conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
 
+# Import functions from python library networkx
 source_python("src/import_py_dijkstra_functions.py")
+
+# Create a graph from the sub street network
 g <- from_pandas_edgelist(df = dt, 
 													source = "source", 
 													target = "target",
 													edge_attr = "m",
 													edge_key = "id")
 
-all_to_all_shortest_paths_to_sqldb(con = con, dt =dt, g = g, buffer = 5000)
+
+
+# Calculate all shortest paths between all nodes (stop after 5000m)
+all_to_all_shortest_paths_to_sqldb(con = con, dt = dt, g = g, buffer = 5000)
+
+# dt_dist_mat <- RPostgres::dbReadTable(con, "distance_matrix") %>%
+# 	filter(source < target)

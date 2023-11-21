@@ -4,5 +4,5 @@
 # import networkx as nx
 from networkx import from_pandas_edgelist
 from networkx import single_source_dijkstra
-from tqdm import tqdm
+from networkx import single_source_dijkstra_path_length
 # linreg_python = linear_model.LinearRegression()
