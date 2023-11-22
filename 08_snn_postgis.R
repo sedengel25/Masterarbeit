@@ -149,28 +149,25 @@ map_od_points_to_network(con = con,
 
 
 ### Calculate Local Node Distance Matrix ---------------------------------------
-# Read sub street network from psql-server
-dt <- RPostgres::dbReadTable(con, "col_2po_4pgr_subset") %>%
-	mutate(m = km*1000) %>%
-	select(id, source, target, m) 
+# # Read sub street network from psql-server
+# dt <- RPostgres::dbReadTable(con, "col_2po_4pgr_subset") %>%
+# 	mutate(m = km*1000) %>%
+# 	select(id, source, target, m) 
+# 
+# # Connect to miniconda to execute Python code
+# conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
+# 
+# # Import functions from python library networkx
+# source_python("src/import_py_dijkstra_functions.py")
+# 
+# # Create a graph from the sub street network
+# g <- from_pandas_edgelist(df = dt, 
+# 													source = "source", 
+# 													target = "target",
+# 													edge_attr = "m",
+# 													edge_key = "id")
+# # nx <- import("networkx")
+# # dt_graph <- nx$to_pandas_edgelist(g) %>% as.data.table
+# # Calculate all shortest paths between all nodes (stop after 5000m)
+# all_to_all_shortest_paths_to_sqldb(con = con, dt = dt, g = g, buffer = 5000)
 
-# Connect to miniconda to execute Python code
-conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
-
-# Import functions from python library networkx
-source_python("src/import_py_dijkstra_functions.py")
-
-# Create a graph from the sub street network
-g <- from_pandas_edgelist(df = dt, 
-													source = "source", 
-													target = "target",
-													edge_attr = "m",
-													edge_key = "id")
-
-
-
-# Calculate all shortest paths between all nodes (stop after 5000m)
-all_to_all_shortest_paths_to_sqldb(con = con, dt = dt, g = g, buffer = 5000)
-
-# dt_dist_mat <- RPostgres::dbReadTable(con, "distance_matrix") %>%
-# 	filter(source < target)
