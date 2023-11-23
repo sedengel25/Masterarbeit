@@ -10,8 +10,8 @@
 # Returns: ...
 # Output: ...
 # Action: Executing a psql-query
-calc_nd <- function(con, char_mapped_points, char_osm2po_subset, char_dist_mat) {
-	query <- paste0("SELECT m1.id as o_m, 
+calc_nd <- function(con, char_mapped_points, char_osm2po_subset, char_dist_mat, char_nd) {
+	query <- paste0("CREATE TABLE ", char_nd ," AS SELECT m1.id as o_m, 
   m2.id as o_n,
   LEAST(
   	m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),

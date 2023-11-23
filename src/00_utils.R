@@ -119,3 +119,105 @@ connect_to_postgresql_db <- function(user, pw, dbname, host) {
 									 port = 5432)
 	return(con)
 }
+
+
+
+# Documentation: psql_drop_old_if_new_exists
+# Usage: psql_drop_old_if_new_exists(con, old_table, new_table)
+# Description: Drops old table if new adjusted table exists
+# Args/Options: con, old_table, new_table
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_drop_old_if_new_exists <- function(con, old_table, new_table) {
+	query <- paste0("
+		DO $$
+		BEGIN
+		  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' 
+		  AND tablename = '", new_table, "') THEN
+		    DROP TABLE IF EXISTS ", old_table, ";
+		  END IF;
+		END
+		$$;")
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_remove_duplicates
+# Usage: psql_remove_duplicates(con, old_table, new_table, col)
+# Description: Creates new table without duplicates based on old table
+# Args/Options: con, old_table, new_table, col
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_remove_duplicates <- function(con, old_table, new_table, col) {
+	query <- paste0(
+		"CREATE TABLE ", new_table,
+		" AS SELECT DISTINCT ON (", paste(col, collapse = ", "), ") * FROM ", 
+		old_table,
+		";"
+	)
+	dbExecute(con, query)
+}
+
+
+
+# Documentation: psql_create_index
+# Usage: psql_create_index(con, char_table, col)
+# Description: Creates a index for chosen table on chosen column
+# Args/Options: con, char_table, col
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_create_index <- function(con, char_table, col) {
+	query <- paste0("CREATE INDEX ", 
+									paste0("idx_", char_table),
+									" ON ",  
+									char_table, 
+									" USING btree (", 
+									paste(col, collapse = ", "), 
+									");")
+	
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_where_source_smaller_target
+# Usage: psql_where_source_smaller_target(con, old_table, new_table)
+# Description: Creates new table only with rows where source < target
+# Args/Options: con, old_table, new_table
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_where_source_smaller_target <- function(con, old_table, new_table) {
+	query <- paste0("CREATE TABLE ", new_table,
+									" AS SELECT * FROM ", 
+									old_table, 
+									" WHERE source < target;")
+	
+	dbExecute(con, query)
+}
+
+
+
+# Documentation: psql_check_indexes
+# Usage: psql_check_indexes(con, char_table)
+# Description: Returns indexes of table
+# Args/Options: con, char_table
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_check_indexes <- function(con, char_table) {
+	query <- paste0("SELECT
+  tablename,
+  indexname,
+  indexdef
+  FROM
+  pg_indexes
+  WHERE
+  tablename = '", char_table,"';")
+	
+	result <- dbSendQuery(con, query)
+	data <- dbFetch(result)
+	return(data)
+}
