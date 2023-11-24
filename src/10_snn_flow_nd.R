@@ -55,7 +55,7 @@ cat(query)
 dbExecute(con, query)
 psql_create_index(con, char_k_nearest_flows, col = c("flow_ref", "flow_other"))
 
-
+# Get number of common flows for each flow combination
 query <- paste0("create table ", char_common_flows, " as
 WITH ClosestFlows AS (
   SELECT flow_ref, ARRAY_AGG(flow_other ORDER BY nd) AS closest_flows
@@ -77,5 +77,19 @@ CROSS JOIN ClosestFlows f2
 WHERE f1.flow_ref < f2.flow_ref;")
 cat(query)
 dbExecute(con, query)
-#psql_check_indexes(con, char_common_flows)
-psql_create_index(con, char_common_flows, col = c("flow1", "flow2"))
+psql_check_indexes(con, char_common_flows)
+# psql_create_index(con, char_common_flows, col = c("flow1", "flow2", "common_flows"))
+
+
+
+query <- paste0("ALTER TABLE ",  char_common_flows, 
+" ADD COLUMN directly_reachable VARCHAR(255);")
+dbExecute(con, query)
+
+query <- paste0("UPDATE ", char_common_flows,
+" SET directly_reachable = CASE
+WHEN common_flows > ", k/2, " THEN 'yes' ELSE 'no' END;")
+dbExecute(con, query)
+cat(query)
+
+
