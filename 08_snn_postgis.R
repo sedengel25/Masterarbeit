@@ -233,3 +233,8 @@ psql_remove_duplicates(con,
 psql_drop_old_if_new_exists(con, 
 														old_table = char_dist_mat_red, 
 														new_table = char_dist_mat_red_no_dup)
+
+
+psql_create_index(con, 
+									char_table = char_dist_mat_red_no_dup, 
+									col = c("source, target"))

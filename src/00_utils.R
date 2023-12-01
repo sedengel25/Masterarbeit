@@ -221,3 +221,201 @@ psql_check_indexes <- function(con, char_table) {
 	data <- dbFetch(result)
 	return(data)
 }
+
+
+# Documentation: psql_get_k_nearest_flows
+# Usage: psql_get_k_nearest_flows(con, k, table_flows, table_k_nearest_flows)
+# Description: Gets k nearest flows
+# Args/Options: con, k, table_flows, table_k_nearest_flows
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_get_k_nearest_flows <- function(con, k, table_flows, table_k_nearest_flows) {
+	query <- paste0("create table ", table_k_nearest_flows, " as
+  								WITH SymmetricFlows AS (
+  									SELECT flow_m AS flow_ref, flow_n AS flow_other, nd FROM ",
+									table_flows, "
+  									UNION
+  									SELECT flow_n AS flow_ref, flow_m AS flow_other, nd FROM ",
+									table_flows, "
+  								),
+  								RankedFlows AS (
+  									SELECT
+  									flow_ref,
+  									flow_other,
+  									nd,
+  									ROW_NUMBER() OVER (PARTITION BY flow_ref ORDER BY nd ASC) as rn
+  									FROM SymmetricFlows
+  								)
+  								SELECT
+  								flow_ref,
+  								flow_other,
+  								nd
+  								FROM
+  								RankedFlows
+  								WHERE
+  								rn <= ", k, ";")
+	cat(query)
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_get_number_of_common_flows
+# Usage: psql_get_number_of_common_flows(con, table_k_nearest_flows, table_common_flows)
+# Description: Get number of common flows
+# Args/Options: con, table_k_nearest_flows, table_common_flows
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_get_number_of_common_flows <- function(con, table_k_nearest_flows, table_common_flows) {
+	query <- paste0("create table ", table_common_flows, " as
+  WITH ClosestFlows AS (
+    SELECT flow_ref, ARRAY_AGG(flow_other ORDER BY nd) AS closest_flows
+    FROM ", table_k_nearest_flows, "
+    GROUP BY flow_ref
+  )
+  SELECT 
+    f1.flow_ref AS flow1, 
+    f2.flow_ref AS flow2, 
+    cardinality(
+      ARRAY(
+        SELECT unnest(f1.closest_flows) 
+        INTERSECT 
+        SELECT unnest(f2.closest_flows)
+      )
+    ) AS common_flows
+  FROM ClosestFlows f1
+  CROSS JOIN ClosestFlows f2
+  WHERE f1.flow_ref < f2.flow_ref;")
+	cat(query)
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_get_number_directly_reachable_flows
+# Usage: psql_get_number_directly_reachable_flows(con, k, table_common_flows, 
+# table_reachable_flows)
+# Description: Get number of directly reachable flows
+# Args/Options: con, k, table_common_flows, 
+# table_reachable_flows
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_get_number_directly_reachable_flows <- function(con, k, table_common_flows, 
+																										 table_reachable_flows) {
+	# Create the column 'directly_reachable'
+	query <- paste0("ALTER TABLE ",  table_common_flows,
+									" ADD COLUMN directly_reachable VARCHAR(255);")
+	dbExecute(con, query)
+	
+	query <- paste0("UPDATE ", table_common_flows,
+									" SET directly_reachable = CASE
+  WHEN common_flows > ", k/2, " THEN 'yes' ELSE 'no' END;")
+	dbExecute(con, query)
+	cat(query)
+	
+	# Count the number of directly reachable flows
+	query <- paste0("CREATE TABLE ", table_reachable_flows,
+									" AS SELECT flow1, COUNT(*) as reachable_count FROM ",
+									table_common_flows,
+									" WHERE directly_reachable = 'yes' 
+  GROUP BY flow1;")
+	dbExecute(con, query)
+}
+
+
+
+# Documentation: psql_calc_nd
+# Usage: psql_calc_nd(con, char_mapped_points, char_osm2po_subset, char_dist_mat)
+# Description: Execute query calculating the NDs between all Os and Ds
+# Args/Options: con, char_mapped_points, char_osm2po_subset, char_dist_mat
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_calc_nd <- function(con, table_mapped_points, 
+												 table_network, 
+												 table_dist_mat, table_nd) {
+	# table_mapped_points <- char_random_o_points
+	# table_network <- char_osm2po_subset
+	# table_dist_mat <- char_dist_mat_red_no_dup
+	# table_nd <- char_random_o_nd
+	query <- paste0("CREATE TABLE ", table_nd ," AS SELECT m1.id as o_m, 
+  m2.id as o_n,
+  LEAST(
+  	m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+  	m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+  	m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+  	m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+  ) AS nd
+  FROM ", table_mapped_points, " m1
+  CROSS JOIN ", table_mapped_points, " m2
+  INNER JOIN ", table_network, " e_ij ON m1.line_id = e_ij.id
+  INNER JOIN ", table_network, " e_kl ON m2.line_id  = e_kl.id
+  INNER JOIN ", table_dist_mat, " pi_pk ON pi_pk.source = LEAST(e_ij.source, e_kl.source) AND pi_pk.target = GREATEST(e_ij.source, e_kl.source)
+  INNER JOIN ", table_dist_mat, " pj_pl ON pj_pl.source = LEAST(e_ij.target, e_kl.target) AND pj_pl.target = GREATEST(e_ij.target, e_kl.target)
+  INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
+  INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
+  where m1.id < m2.id;")
+
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_calc_flow_nds
+# Usage: psql_calc_flow_nds(con, table_o_nds, table_d_nds, table_flow_nds)
+# Description: Execute query calculating the NDs between all flows
+# Args/Options: con, table_o_nds, table_d_nds, table_flow_nds
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_calc_flow_nds <- function(con, table_o_nds, table_d_nds, table_flow_nds) {
+	table_o_nds = char_random_o_nd
+	table_d_nds = char_random_d_nd
+	table_flow_nds = char_random_flow_nd
+	query <- paste0("create table ",
+									table_flow_nds,
+									" as select o_points.o_m  as flow_m, o_points.o_n  as flow_n, 
+  o_points.nd + d_points.nd as nd from ", 
+									table_o_nds,
+									" o_points inner join ", 
+									table_d_nds, 
+									" d_points on o_points.o_m = d_points.d_m and o_points.o_n = d_points.d_n;")
+	cat(query)
+	dbExecute(con, query)
+}
+
+# Documentation: psql_create_table_random_od_points
+# Usage: psql_create_table_random_od_points(con, 
+# table_random_od_points, table_all_points,random_indices)
+# Description: Creates a table for the random OD-points
+# Args/Options: con, table_random_od_points, table_all_points,random_indices
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_create_table_random_od_points <- function(con, 
+																							 table_random_od_points, 
+																							 table_all_points,
+																							 random_indices) {
+	query <- paste0("DROP TABLE IF EXISTS ", table_random_od_points)
+	dbExecute(con, query)
+	
+	query <- paste0("CREATE TABLE ", table_random_od_points,
+									" (
+  	id SERIAL PRIMARY KEY,
+  	line_id integer,
+  	geom GEOMETRY(Point,32632),
+  	distance_to_start DOUBLE PRECISION,
+  	distance_to_end DOUBLE PRECISION
+  );")
+	dbExecute(con, query)
+	
+	query <- paste0("INSERT INTO ", 
+									table_random_od_points,
+									" (geom, line_id, distance_to_start, distance_to_end)
+  SELECT geom, line_id, distance_to_start, distance_to_end
+  FROM ", 
+									table_all_points,
+									" WHERE id IN (", 
+									paste(random_indices, collapse = ", "), ");")
+	dbExecute(con, query)
+}
