@@ -356,7 +356,6 @@ psql_calc_nd <- function(con, table_mapped_points,
   INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
   INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
   where m1.id < m2.id;")
-
 	dbExecute(con, query)
 }
 
@@ -384,38 +383,35 @@ psql_calc_flow_nds <- function(con, table_o_nds, table_d_nds, table_flow_nds) {
 	dbExecute(con, query)
 }
 
-# Documentation: psql_create_table_random_od_points
-# Usage: psql_create_table_random_od_points(con, 
-# table_random_od_points, table_all_points,random_indices)
-# Description: Creates a table for the random OD-points
-# Args/Options: con, table_random_od_points, table_all_points,random_indices
+
+# Documentation: psql_get_max_of_num_col
+# Usage: psql_get_max_of_num_col(con, num_col, table)
+# Description: Get max value of numerical column of certain table
+# Args/Options: con, num_col, table
 # Returns: ...
 # Output: ...
 # Action: Executing a psql-query
-psql_create_table_random_od_points <- function(con, 
-																							 table_random_od_points, 
-																							 table_all_points,
-																							 random_indices) {
-	query <- paste0("DROP TABLE IF EXISTS ", table_random_od_points)
-	dbExecute(con, query)
+psql_get_max_of_num_col <- function(con, num_col, table) {
+	query <- paste0("SELECT MAX(", num_col, ") FROM ",
+									table, ";")
 	
-	query <- paste0("CREATE TABLE ", table_random_od_points,
-									" (
-  	id SERIAL PRIMARY KEY,
-  	line_id integer,
-  	geom GEOMETRY(Point,32632),
-  	distance_to_start DOUBLE PRECISION,
-  	distance_to_end DOUBLE PRECISION
-  );")
-	dbExecute(con, query)
-	
-	query <- paste0("INSERT INTO ", 
-									table_random_od_points,
-									" (geom, line_id, distance_to_start, distance_to_end)
-  SELECT geom, line_id, distance_to_start, distance_to_end
-  FROM ", 
-									table_all_points,
-									" WHERE id IN (", 
-									paste(random_indices, collapse = ", "), ");")
-	dbExecute(con, query)
+	result <- dbSendQuery(con, query)
+	int_max <- dbFetch(result) %>% as.numeric
+	return(int_max)
+}
+
+
+# Documentation: psql_count_rows
+# Usage: psql_count_rows(con, table)
+# Description: Get number of rows of a table
+# Args/Options: con, table
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_count_rows <- function(con, table) {
+	query <- paste0("SELECT COUNT(*) FROM ", table)
+	res <- dbSendQuery(con, query)
+	data <- dbFetch(res)
+	int_count <- data %>% pull %>% as.numeric
+	return(int_count)
 }

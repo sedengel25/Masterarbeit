@@ -37,19 +37,19 @@ dt_mapped_d <- RPostgres::dbReadTable(con, char_mapped_d_points) %>%
 
 
 ## Calculate NDs of all Origin points
-# calc_nd(con = con, 
-# char_mapped_points = char_mapped_o_points, 
-# char_osm2po_subset = char_osm2po_subset, 
-# char_dist_mat = char_dist_mat_red_no_dup,
-# char_nd = char_o_nd)
+psql_calc_nd(con = con,
+						table_mapped_points = char_mapped_o_points,
+						table_network = char_osm2po_subset,
+						table_dist_mat =  char_dist_mat_red_no_dup,
+						table_nd =  char_o_nd)
 
 
 ## Calculate NDs of all Destination points
-# calc_nd(con = con, 
-# char_mapped_points = char_mapped_d_points, 
-# char_osm2po_subset = char_osm2po_subset, 
-# char_dist_mat = char_dist_mat_red_no_dup,
-# char_nd = char_d_nd)
+psql_calc_nd(con = con,
+						 table_mapped_points = char_mapped_d_points,
+						 table_network = char_osm2po_subset,
+						 table_dist_mat =  char_dist_mat_red_no_dup,
+						 table_nd =  char_o_nd)
 
 
 
@@ -84,16 +84,9 @@ psql_create_index(con, char_table = char_d_nd_no_dup, col = c("o_m", "o_n"))
 
 
 # Create table with flow-nd-distances
-query <- paste0("create table ",
-char_flows_nd,
-" as select o_points.o_m  as flow_m, o_points.o_n  as flow_n, 
-o_points.nd + d_points.nd as nd from ", 
-char_o_nd_no_dup,
-" o_points inner join ", 
-char_d_nd_no_dup, 
-" d_points on o_points.o_m = d_points.d_m and o_points.o_n = d_points.d_n;")
-
-dbExecute(con, query)
+psql_calc_flow_nds(con, table_o_nds = char_o_nd_no_dup,
+									 table_d_nds = char_d_nd_no_dup,
+									 table_flow_nds = char_flows_nd)
 
 
 # Create indexes
