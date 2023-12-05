@@ -25,7 +25,7 @@ char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
 # 
 # dbExecute(con, query)
 
-int_k <- 5
+int_k <- 20
 char_k_nearest_flows <- paste0(char_city_prefix,"_",k ,"_nearest_flows")
 # Get k nearest flows for each flow
 psql_get_k_nearest_flows(con, 

@@ -33,8 +33,6 @@ dt_mapped_d <- RPostgres::dbReadTable(con, char_mapped_d_points) %>%
 	select(id, line_id, distance_to_start, distance_to_end)
 
 
-# dt_dist_mat <- RPostgres::dbReadTable(con, char_dist_mat)
-
 
 ## Calculate NDs of all Origin points
 psql_calc_nd(con = con,

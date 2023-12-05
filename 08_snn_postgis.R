@@ -30,6 +30,9 @@ dt <- dt %>%
 		)
 	)
 
+# dt %>%
+# 	filter(start_hour == 8) %>%
+# 	filter(weekday %in% 1:5)
 
 char_pow_tod <- "wd_m" 
 
@@ -84,7 +87,7 @@ char_dist_mat_red_no_dup <- paste0(char_city_prefix, "_dist_mat_red_no_dup")
 
 # Executing the bat-file of the chosen city creates a sql file with all edges
 cmd_osm2po <- paste('cmd /c "cd /d', path_osm2po, '&&', char_bat_file, '"')
-system(cmd_osm2po)
+# system(cmd_osm2po)
 
 
 # Run the sql-file to get the corresponding table
@@ -93,7 +96,8 @@ sql_file <- paste0(path_osm2po, "/", char_city_prefix, "/", sql_filename)
 Sys.setenv(PGPASSWORD = pw)
 cmd_psql <- sprintf('"%s" -h %s -p %s -d %s -U %s -f "%s"', 
 										path_psql, host, port, dbname, user, sql_file)
-system(cmd_psql)
+cat(cmd_psql)
+system(cmd_mysql)
 Sys.unsetenv("PGPASSWORD")
 
 
