@@ -321,7 +321,7 @@ psql_get_number_directly_reachable_flows <- function(con, k, table_common_flows,
 	dbExecute(con, query)
 
 	# Count the number of directly reachable flows
-	query <- paste0("CREATE TEMP TABLE ", table_reachable_flows,
+	query <- paste0("CREATE TABLE ", table_reachable_flows,
 									" AS SELECT flow1, COUNT(*) as reachable_count FROM ",
 									table_common_flows,
 									" WHERE directly_reachable = 'yes' 
