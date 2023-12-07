@@ -33,7 +33,7 @@ dt_mapped_d <- RPostgres::dbReadTable(con, char_mapped_d_points) %>%
 	select(id, line_id, distance_to_start, distance_to_end)
 
 
-
+start_time <- Sys.time()
 ## Calculate NDs of all Origin points
 psql_calc_nd(con = con,
 						table_mapped_points = char_mapped_o_points,
@@ -47,8 +47,9 @@ psql_calc_nd(con = con,
 						 table_mapped_points = char_mapped_d_points,
 						 table_network = char_osm2po_subset,
 						 table_dist_mat =  char_dist_mat_red_no_dup,
-						 table_nd =  char_o_nd)
-
+						 table_nd =  char_d_nd)
+end_time <- Sys.time()
+duration <- difftime(end_time, start_time, units = "mins")
 
 
 
