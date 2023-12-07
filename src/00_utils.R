@@ -151,6 +151,9 @@ psql_drop_old_if_new_exists <- function(con, old_table, new_table) {
 # Output: ...
 # Action: psql-query
 psql_remove_duplicates <- function(con, old_table, new_table, col) {
+	query <- paste0("DROP TABLE IF EXISTS ", new_table)
+	dbExecute(con, query)
+	
 	query <- paste0(
 		"CREATE TABLE ", new_table,
 		" AS SELECT DISTINCT ON (", paste(col, collapse = ", "), ") * FROM ", 
@@ -169,15 +172,40 @@ psql_remove_duplicates <- function(con, old_table, new_table, col) {
 # Returns: ...
 # Output: ...
 # Action: psql-query
-psql_create_index <- function(con, char_table, col) {
+psql_create_index <- function(con, table, col) {
+	
+	char_idx <- paste0("idx_", table)
+	
+	query <- paste0("DROP INDEX IF EXISTS ", char_idx)
+	dbExecute(con, query)
+	
 	query <- paste0("CREATE INDEX ", 
-									paste0("idx_", char_table),
+									char_idx,
 									" ON ",  
-									char_table, 
+									table, 
 									" USING btree (", 
 									paste(col, collapse = ", "), 
 									");")
 	
+	dbExecute(con, query)
+}
+
+
+# Documentation: psql_create_index
+# Usage: psql_create_index(con, char_table, col)
+# Description: Creates a index for chosen table on chosen column
+# Args/Options: con, char_table, col
+# Returns: ...
+# Output: ...
+# Action: psql-query
+psql_create_spatial_index <- function(con, table) {
+	
+	char_idx <- paste0(table, "_geometry_idx")
+	
+	query <- paste0("DROP INDEX IF EXISTS ", char_idx)
+	dbExecute(con, query)
+	
+	query <- paste0("CREATE INDEX ON ",  table, " USING GIST (geometry);")
 	dbExecute(con, query)
 }
 
@@ -348,7 +376,7 @@ psql_calc_nd <- function(con, table_mapped_points,
 	query <- paste0("DROP TABLE IF EXISTS ", table_nd)
 	dbExecute(con, query)
 	
-	query <- paste0("CREATE TEMP TABLE ", table_nd ," AS SELECT m1.id as o_m, 
+	query <- paste0("CREATE TABLE ", table_nd ," AS SELECT m1.id as o_m, 
   m2.id as o_n,
   LEAST(
   	m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
@@ -365,10 +393,21 @@ psql_calc_nd <- function(con, table_mapped_points,
   INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
   INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
   where m1.id < m2.id;")
-	# cat(query)
+	cat(query)
 	dbExecute(con, query)
 }
 
+# Documentation: psql_drop_table_if_exists
+# Usage: psql_drop_table_if_exists(con, table)
+# Description: Drops table if it already exists
+# Args/Options: con, table
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_drop_table_if_exists <- function(con, table) {
+  query <- paste0("DROP TABLE IF EXISTS ", table)
+  dbExecute(con, query)
+}
 
 # Documentation: psql_calc_flow_nds
 # Usage: psql_calc_flow_nds(con, table_o_nds, table_d_nds, table_flow_nds)
@@ -381,7 +420,7 @@ psql_calc_flow_nds <- function(con, table_o_nds, table_d_nds, table_flow_nds) {
 	query <- paste0("DROP TABLE IF EXISTS ", table_flow_nds)
 	dbExecute(con, query)
 	
-	query <- paste0("create temp table ",
+	query <- paste0("create table ",
 									table_flow_nds,
 									" as select o_points.o_m  as flow_m, o_points.o_n  as flow_n, 
   o_points.nd + d_points.nd as nd from ", 
@@ -424,4 +463,50 @@ psql_count_rows <- function(con, table) {
 	data <- dbFetch(res)
 	int_count <- data %>% pull %>% as.numeric
 	return(int_count)
+}
+
+# Documentation: psql_update_srid
+# Usage: psql_update_srid(con, table, crs)
+# Description: Update crs of geom-colun of chosen table
+# Args/Options: con, table, crs
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_update_srid <- function(con, table, crs) {
+	query <- paste0("SELECT UpdateGeometrySRID('",
+									table,
+									"','geometry',",
+									crs,
+									");")
+	dbExecute(con, query)
+}
+
+# Documentation: cmd_write_sql_file
+# Usage: cmd_write_sql_file(char_cmd_psql_shp_to_sql)
+# Description: Writes sql file based on temp batch-file
+# Args/Options: char_cmd_psql_shp_to_sql
+# Returns: ...
+# Output: ...
+# Action: Executing a cmd-statement to run a sql-file
+cmd_write_sql_file <- function(char_cmd_psql_shp_to_sql) {
+	temp_batch_file <- tempfile(pattern = "command", fileext = ".bat")
+	writeLines(char_cmd_psql_shp_to_sql,
+						 temp_batch_file)
+	system(paste("cmd /c", temp_batch_file))
+}
+
+# Documentation: cmd_execute_sql_file
+# Usage: cmd_execute_sql_file(path_to_sql_file)
+# Description: Runs sql file
+# Args/Options: path_to_sql_file
+# Returns: ...
+# Output: ...
+# Action: Executing a cmd-statement to run a sql-file
+cmd_execute_sql_file <- function(path_to_sql_file) {
+	Sys.setenv(PGPASSWORD = pw)
+	cmd_psql <- sprintf('"%s" -h %s -p %s -d %s -U %s -f "%s"', 
+											path_psql_exe, host, port, dbname, user, path_to_sql_file)
+	
+	system(cmd_psql)
+	Sys.unsetenv("PGPASSWORD")
 }

@@ -3,17 +3,17 @@
 # Master Thesis
 # This file contains all functions to execute 08_snn_postgis.R
 #############################################################################
-# Documentation: change_geometry_type
-# Usage: change_geometry_type(con, char_osm2po, crs)
+# Documentation: psql_change_geometry_type
+# Usage: psql_change_geometry_type(con, char_osm2po, crs)
 # Description: Change types of geometry-col of table considered
 # Args/Options: con, char_osm2po, crs
 # Returns: ...
 # Output: ...
 # Action: Change types of geometry-col of table considered
-change_geometry_type <- function(con, char_osm2po, crs) {
+psql_change_geometry_type <- function(con, table, crs) {
   # Bring geometry-column of line-table and point-table to the same name
 	query <- paste0("ALTER TABLE ", 
-									char_osm2po,
+									table,
 									" RENAME COLUMN geom_way TO geometry;")
 	
   dbExecute(con, query)
@@ -21,7 +21,7 @@ change_geometry_type <- function(con, char_osm2po, crs) {
   
   # Bring line-table and point-table to the same crs
   query <- paste0("ALTER TABLE ", 
-  								char_osm2po, 
+  								table, 
   " ALTER COLUMN geometry TYPE geometry(LINESTRING, ",
   crs, 
   ") USING ST_Transform(geometry, ", crs, ");")
@@ -29,109 +29,62 @@ change_geometry_type <- function(con, char_osm2po, crs) {
   dbExecute(con, query)
 }
 
-
-
-# Documentation: create_spatial_indices
-# Usage: create_spatial_indices(con, char_osm2po, char_o_table, char_d_table)
-# Description: Create geometry-index for all tables involved
-# Args/Options: con, char_osm2po, char_o_table, char_d_table
+# Documentation: psql_create_bbox
+# Usage: psql_create_bbox(con, char_shp)
+# Description: Creates psql-bboxh
+# Args/Options: con, char_shp
 # Returns: ...
 # Output: ...
-# Action: Create geometry-index for all tables involved
-create_spatial_indices <- function(con, char_osm2po, char_o_table, char_d_table) {
-
-	query <- paste0("CREATE INDEX ON ",  char_osm2po, " USING GIST (geometry);")
-  dbExecute(con, query)
-  
-  query <- paste0("CREATE INDEX ON ",  char_o_table, " USING GIST (geometry);")
-  dbExecute(con, query)
-  
-  query <- paste0("CREATE INDEX ON ",  char_d_table, " USING GIST (geometry);")
-  dbExecute(con, query)
-  
+# Action: Execute psql-query
+psql_create_bbox <- function(con, table_shp, table_bbox) {
+	psql_drop_table_if_exists(con, table = table_bbox)
+	query <- paste0("CREATE TABLE ", table_bbox, " AS 
+  SELECT ST_ExteriorRing((ST_Dump(ST_Union(geom))).geom) AS geometry FROM ", 
+									table_shp, ";")
+	
+	dbExecute(con, query)
 }
 
-
-# Documentation: get_sub_street_network
-# Usage: get_sub_street_network(con, char_o_table, char_d_table, city_prefix)
-# Description: Gets bbox of all OD-points and subsets network accordingly
-# Args/Options: con, char_o_table, char_d_table, city_prefix
+# Documentation: psql_create_sub_network
+# Usage: psql_create_sub_network(con, table_full_network, table_sub_network, 
+# table_bbox)
+# Description: Creates sub-network based on bbox
+# Args/Options: con, table_full_network, table_sub_network, table_bbox
 # Returns: ...
 # Output: ...
 # Action: creates new reduced PostgreSQL-table
-get_sub_street_network <- function(con,
-																	 char_o_table,
-																	 char_d_table,
-																	 char_osm2po,
-																	 char_osm2po_subset) {
-		
-	# Drop the existing bbox temp table if it exists
-	dbExecute(con, "DROP TABLE IF EXISTS bbox_geom;")
-
-	# Calculate the bounding box with the correct SRID
-	query <- paste0("WITH points AS (SELECT geometry FROM ", char_o_table, 
-	" UNION ALL SELECT geometry FROM ", 
-	char_d_table, 
-	"), bbox AS (SELECT ST_SetSRID(ST_Extent(geometry), 32632) as geom FROM points)",
-	" SELECT * INTO TEMP bbox_geom FROM bbox;")
-	dbExecute(con, query)
+psql_create_sub_network <- function(con, table_full_network, table_sub_network, 
+																		table_bbox) {
 	
-	# Create a new subset table after dropping the old one if it exists
-	query <- paste("DROP TABLE IF EXISTS", char_osm2po_subset)
-	dbExecute(con, query)
+	psql_drop_table_if_exists(con, table = table_sub_network)
+	query <- paste0("CREATE TABLE ",
+									table_sub_network,
+									" AS SELECT cpp.* FROM ",
+									table_full_network,
+									" cpp, ",
+									table_bbox,
+									" bbox WHERE ST_Intersects(cpp.geometry, bbox.geometry);")
 	
-	query <- paste0("CREATE TABLE ", char_osm2po_subset, " AS SELECT * FROM ", 
-									char_osm2po, " WHERE ST_Intersects(", char_osm2po, 
-								 ".geometry, (SELECT geom FROM bbox_geom));")
-	dbExecute(con, query)
-	
-	# Create spatial index
-	query <- paste0("CREATE INDEX ON ",  char_osm2po_subset, " USING GIST (geometry);")
 	dbExecute(con, query)
 }
 
 
 
-# move_postgis_to_schema <- function(con, schema) {
-# 	dbExecute(con, "UPDATE pg_extension SET extrelocatable = true WHERE extname = 'postgis';")
-# 	dbExecute(con, paste0("ALTER EXTENSION postgis SET SCHEMA ", schema))
-# }
 
-# Documentation: map_od_points_to_network
-# Usage: map_od_points_to_network(con, char_mapped_points,
-# char_ochar_d_table, char_osm2po_subset)
-# Description: Gets bbox of all OD-points and subsets network accordingly
-# Args/Options: con, char_mapped_points, char_ochar_d_table, char_osm2po_subset
+# Documentation: psql_ls_to_polygon
+# Usage: psql_ls_to_polygon(con, table)
+# Description: Turns closed linestring into polygon
+# Args/Options: con, table
 # Returns: ...
 # Output: ...
 # Action: maps OD-points onto street network
-map_od_points_to_network <- function(con,
-																		 char_mapped_points,
-																		 char_ochar_d_table,
-																		 char_osm2po_subset) {
-	
-	# Map origin points
-	query <- paste0("DROP TABLE IF EXISTS ", char_mapped_points, ";")
-	dbExecute(con, query)
-	
-	query <- paste0("CREATE TABLE ", char_mapped_points, " AS SELECT
-    point.id,
-    line.id AS line_id,
-    ST_ClosestPoint(line.geometry, point.geometry) AS closest_point_on_line,
-    ST_Distance(line.geometry, point.geometry) AS distance_to_line,
-    ST_Distance(ST_StartPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_start,
-    ST_Distance(ST_EndPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_end
-  FROM ", char_ochar_d_table, " AS point CROSS JOIN LATERAL
-    (SELECT id, geometry
-     FROM ",  char_osm2po_subset, "
-     ORDER BY geometry <-> point.geometry
-     LIMIT 1) AS line;
-  ")
-	cat(query)
+psql_ls_to_polygon <- function(con, table) {
+	query <- paste0("UPDATE ", table,
+									" SET geometry = (SELECT ST_MakePolygon(geometry) FROM (SELECT geometry FROM ",
+									table,
+									") AS subquery);")
 	dbExecute(con, query)
 }
-
-
 
 all_to_all_shortest_paths_to_sqldb <- function(con, dt, char_dist_mat, g, buffer) {
 	

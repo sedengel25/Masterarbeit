@@ -61,10 +61,10 @@ for(rep in 1:int_simulations){
 	int_rand_origin <- sample(int_max_id, int_max_flow)
 	int_rand_dest <- sample(int_max_id, int_max_flow)
 	
-	query <- "SET work_mem = '1GB';"
-	dbExecute(con, query)
-	query <- "SET maintenance_work_mem = '1GB';"
-	dbExecute(con, query)
+	# query <- "SET work_mem = '1GB';"
+	# dbExecute(con, query)
+	# query <- "SET maintenance_work_mem = '1GB';"
+	# dbExecute(con, query)
 	# Create tables for OD-points
 	psql_create_table_random_od_points(con, 
 																		 table_random_od_points = char_random_o_points,

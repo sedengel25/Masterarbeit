@@ -157,7 +157,11 @@ path_sf_dest <- here::here(path_processed_data_9, "sf_dest.rds")
 # 	here::here(path_external_data, "shp/köln/Strasse.shp")
 path_osm2po <- "C:/osm2po-5.5.5"
 
-path_psql <- "C:/Program Files/PostgreSQL/16/bin/psql.exe"
+path_psql_exe <- "C:/Program Files/PostgreSQL/16/bin/psql.exe"
+path_shp2psql_exe <- "C:/Program Files/PostgreSQL/16/bin/shp2pgsql.exe"
+
+path_shp_col <- here::here(path_external_data, "col/Stadtbezirk.shp")
+path_sql_col <- here::here(path_processed_data_8, "col_stadtbezirk.sql")
 # Output
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
