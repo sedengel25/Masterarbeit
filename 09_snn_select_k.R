@@ -14,18 +14,8 @@ source("./src/09_utils.R")
 ################################################################################
 int_crs <- 32632
 char_city_prefix <- "col"
-char_pow_tod <- "wd_m"
-char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
-char_origin <- paste0(char_city_prefix, "_origin_", char_pow_tod)
-char_dest <- paste0(char_city_prefix, "_dest_", char_pow_tod)
-char_origin_mapped <- paste0(char_city_prefix, "_origin_mapped_", char_pow_tod)
-char_dest_mapped <- paste0(char_city_prefix, "_dest_mapped_", char_pow_tod)
-char_dist_mat_red_no_dup <- paste0(char_city_prefix, "_dist_mat_red_no_dup")
-char_origin_nd <- paste0(char_city_prefix, "_origin_nds_", char_pow_tod)
-char_dest_nd <- paste0(char_city_prefix, "_dest_nds_", char_pow_tod)
-char_origin_nd_no_dup <- paste0(char_city_prefix, "_origin_nds_no_dup_", char_pow_tod)
-char_dest_nd_no_dup <- paste0(char_city_prefix, "_dest_nds_no_dup_", char_pow_tod)
-char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
+char_vis <- paste0(char_city_prefix, "_vis_flows")
+
 
 
 ################################################################################
@@ -54,7 +44,7 @@ dt <- dt %>%
 
 
 
-
+char_pow_tod <- "wd_m"
 dt <- dt %>%
 	filter(pow_tod == char_pow_tod)
 
@@ -62,9 +52,18 @@ dt <- dt %>%
 ################################################################################
 # Map points to street network
 ################################################################################
+char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
+char_origin <- paste0(char_city_prefix, "_origin_", char_pow_tod)
+char_dest <- paste0(char_city_prefix, "_dest_", char_pow_tod)
+char_origin_mapped <- paste0(char_city_prefix, "_origin_mapped_", char_pow_tod)
+char_dest_mapped <- paste0(char_city_prefix, "_dest_mapped_", char_pow_tod)
+char_dist_mat_red_no_dup <- paste0(char_city_prefix, "_dist_mat_red_no_dup")
+char_origin_nd <- paste0(char_city_prefix, "_origin_nds_", char_pow_tod)
+char_dest_nd <- paste0(char_city_prefix, "_dest_nds_", char_pow_tod)
+
+
 # Create 2 psql-table for OD-points
 psql_dt_to_od_tables(con, dt)
-
 
 
 
@@ -90,6 +89,11 @@ psql_create_index(con, table = char_dest_mapped,
 ################################################################################
 # Calculate network distances
 ################################################################################
+char_origin_nd_no_dup <- paste0(char_city_prefix, "_origin_nds_no_dup_", char_pow_tod)
+char_dest_nd_no_dup <- paste0(char_city_prefix, "_dest_nds_no_dup_", char_pow_tod)
+char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
+
+
 dt_network <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%
 	mutate(m = km*1000) %>%
 	select(id, source, target, m) 
@@ -105,7 +109,7 @@ dt_mapped_dest <- RPostgres::dbReadTable(con, char_dest_mapped) %>%
 
 
 
-## Calculate NDs of all Origin points
+# Calculate NDs of all Origin points
 psql_calc_nd(con = con,
 						table_mapped_points = char_origin_mapped,
 						table_network = char_osm2po_subset,
@@ -113,7 +117,7 @@ psql_calc_nd(con = con,
 						table_nd =  char_origin_nd)
 psql_create_index(con, table = char_origin_nd, col = c("o_m", "o_n"))
 
-## Calculate NDs of all Destination points
+# Calculate NDs of all Destination points
 psql_calc_nd(con = con,
 						 table_mapped_points = char_dest_mapped,
 						 table_network = char_osm2po_subset,
@@ -172,68 +176,30 @@ psql_create_index(con, table = char_flows_nd, col = c("flow_m", "flow_n"))
 ################################################################################
 # Select the right k for k-nearest neighbors
 ################################################################################
-char_city_prefix <- "col"
-char_mapped_o_points <- paste0(char_city_prefix, "_mapped_o_points")
-char_mapped_d_points <- paste0(char_city_prefix, "_mapped_d_points")
-char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
-char_common_flows <- paste0(char_city_prefix, "_common_flows")
-char_vis <- paste0(char_city_prefix, "_vis_flows")
-char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
+int_k_max <- 60
 
-# Create table to check whether calculating flow-nds worked: CHECK
-# query <- paste0("CREATE TABLE col_vis_flows AS
-# SELECT origin.id,
-#   ST_MakeLine(origin.closest_point_on_line , dest.closest_point_on_line) AS line_geom
-# FROM ",  char_mapped_o_points, " origin
-# INNER JOIN ", char_mapped_d_points, " dest ON origin.id = dest.id;")
-# 
-# dbExecute(con, query)
+# psql_create_kmax_knn_tables(con, 
+# 														k_max = int_k_max, 
+# 														city_prefix = char_city_prefix,
+# 														table_flows_nd = char_flows_nd)
 
-
-# for(int_k in 1:60){
-# 	print(int_k)
-# 	char_k_nearest_flows <- paste0(char_city_prefix,"_",int_k ,"_nearest_flows")
-# 	# Get k nearest flows for each flow
-# 	psql_get_k_nearest_flows(con, 
-# 													 k = int_k, 
-# 													 table_flows = char_flows_nd,
-# 													 table_k_nearest_flows = char_k_nearest_flows)
-# 	
-# 	psql_create_index(con, char_k_nearest_flows, col = c("flow_ref", "flow_other"))
-# }
-
-num_variances <- c()
-num_rks <- c()
-for(int_k in 1:60){
-	char_k_nearest_flows <- paste0(char_city_prefix,"_",int_k ,"_nearest_flows")
-	dt_k_nearest_flows <- RPostgres::dbReadTable(con, char_k_nearest_flows)
-	num_variances[int_k] <- var(dt_k_nearest_flows$nd)
-	num_rks[int_k] <- calc_rk(k = int_k)
-}
-num_variances_k <- num_variances
-num_variances_k_1 <- num_variances_k %>% lead
-num_variances_k_1 <- num_variances_k_1[-length(num_variances_k_1)]
-num_variances_k <- num_variances_k[-length(num_variances_k)]
-
-num_var_ratio <- num_variances_k_1/num_variances_k
-num_theo_var_ratio <- num_rks[-length(num_rks)]
-num_rkd <- num_var_ratio/ num_theo_var_ratio
-
-dt_rkd <- data.table(
-	k = seq(1:59),
-	rkd = num_rkd
-)
+dt_rkd <- create_rkd_dt(con, 
+												k_max = int_k_max, 
+												city_prefix = char_city_prefix)
 ggplot() +
-	geom_point(data = dt_rkd, aes(x = k, y = rkd))
+	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
 
-#int_k <- 45?
+int_k <- 45
+char_k_nearest_flows <- paste0(char_city_prefix, "_", int_k, "_nearest_flows")
+char_reachable <- paste0(char_city_prefix, "_", int_k, "_numb_reachable_flows")
+char_common_flows <- paste0(char_city_prefix, "_", int_k, "_common_flows")
 
 # Get number of common flows for each flow combination
 psql_get_number_of_common_flows(con, 
 																table_k_nearest_flows = char_k_nearest_flows,
 																table_common_flows = char_common_flows)
-psql_check_indexes(con, char_common_flows)
-# psql_create_index(con, char_common_flows, col = c("flow1", "flow2", "common_flows"))
+
+psql_create_index(con, char_common_flows, col = c("flow1", "flow2", "common_flows"))
 
 
 # Get number of directly reachable flows

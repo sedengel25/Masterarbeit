@@ -79,3 +79,112 @@ psql_map_od_points_to_network <- function(con,
   ")
 	dbExecute(con, query)
 }
+
+# Documentation: psql_create_visualisable_flows
+# Usage: psql_create_visualisable_flows(con, table_origin, table_dest)
+# Description: Binds points to linestrings so flows can be visualized
+# Args/Options: con, table_origin, table_dest
+# Returns: ...
+# Output: ...
+# Action: Binds points to linestrings
+psql_create_visualisable_flows <- function(con, table_origin, table_dest) {
+	# Create table to check whether calculating flow-nds worked: CHECK
+	query <- paste0("CREATE TABLE col_vis_flows AS
+  SELECT origin.id,
+    ST_MakeLine(origin.closest_point_on_line , dest.closest_point_on_line) AS line_geom
+  FROM ",  table_origin, " origin
+  INNER JOIN ", char_mapped_d_points, " dest ON origin.id = dest.id;")
+	
+	dbExecute(con, table_dest)
+}
+
+
+# Documentation: psql_create_kmax_knn_tables
+# Usage: psql_create_kmax_knn_tables(con, k_max, city_prefix, table_flows_nd)
+# Description: Creates kmax psql-tables with knn-flows for each k within (1, kmax)
+# Args/Options: con, k_max, city_prefix, table_flows_nd
+# Returns: ...
+# Output: ...
+# Action: creates kmax psql-tables
+psql_create_kmax_knn_tables <- function(con, k_max, city_prefix, table_flows_nd) {
+	
+	
+	for(k in 1:k_max){
+		print(k)
+		char_k_nearest_flows <- paste0(city_prefix, "_", k, "_nearest_flows")
+		psql_get_k_nearest_flows(con,
+														 k = k,
+														 table_flows = table_flows_nd,
+														 table_k_nearest_flows = char_k_nearest_flows)
+		
+		psql_create_index(con, 
+											table = char_k_nearest_flows, 
+											col = c("flow_ref", "flow_other"))
+	}
+}
+
+
+# Documentation: calc_rk 
+# Usage: calc_fk(k)
+# Description: Returns F_k (https://sci-hub.ee/10.1007/s11004-011-9325-x)
+# Args/Options: k
+# Returns: F_k
+# Output: ...
+# Action: ...
+calc_fk <- function(k) {
+	k_value <- k * factorial(2 * k) * (pi^0.5) / ((2^k * factorial(k))^2)
+	return(k_value)
+}
+
+# Documentation: calc_rk
+# Usage: calc_rk(k)
+# Description: Calculates R_k from the snn_flow-Paper
+# Args/Options: k
+# Returns: R_k
+# Output: ...
+# Action: ...
+calc_rk <- function(k) {
+	true_value <- k
+	ratio_value <- (true_value + 1 - ((2 * true_value + 1) / (2 * true_value))^2 *
+										calc_fk(true_value)^2) / 
+		(true_value - calc_fk(true_value)^2)
+	cat("Ratio Value for k =", true_value, "is", ratio_value, "\n")
+	return(ratio_value)
+}
+
+
+
+# Documentation: create_rkd_dt
+# Usage: create_rkd_dt(con, k_max, city_prefix)
+# Description: Creates at dt with the cols 'k' and 'rkd'
+# Args/Options: con, k_max, city_prefix
+# Returns: datatable
+# Output: ...
+# Action: ...
+create_rkd_dt <- function(con, k_max, city_prefix) {
+	num_variances <- c()
+	num_rks <- c()
+	for(k in 1:k_max){
+		char_k_nearest_flows <- paste0(city_prefix, "_", k , "_nearest_flows")
+		dt_k_nearest_flows <- RPostgres::dbReadTable(con, char_k_nearest_flows)
+		num_variances[k] <- var(dt_k_nearest_flows$nd)
+		num_rks[k] <- calc_rk(k = k)
+	}
+	num_variances_k <- num_variances
+	num_variances_k_1 <- num_variances_k %>% lead
+	num_variances_k_1 <- num_variances_k_1[-length(num_variances_k_1)]
+	num_variances_k <- num_variances_k[-length(num_variances_k)]
+	
+	num_var_ratio <- num_variances_k_1/num_variances_k
+	num_theo_var_ratio <- num_rks[-length(num_rks)]
+	num_rkd <- num_var_ratio/ num_theo_var_ratio
+	
+	dt_rkd <- data.table(
+		k = seq(1:(k_max-1)),
+		rkd = num_rkd
+	)
+	
+	return(dt_rkd)
+}
+
+

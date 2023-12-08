@@ -6,8 +6,11 @@
 source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/00_config_psql.R")
-# source("./src/12_utils.R")
+# source("./src/11_utils.R")
 
+################################################################################
+# Configuration
+################################################################################
 char_city_prefix <- "col"
 char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
 char_random_common_flows <- paste0(char_city_prefix, "_random_common_flows")

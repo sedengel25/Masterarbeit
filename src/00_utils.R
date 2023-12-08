@@ -393,7 +393,6 @@ psql_calc_nd <- function(con, table_mapped_points,
   INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
   INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
   where m1.id < m2.id;")
-	cat(query)
 	dbExecute(con, query)
 }
 

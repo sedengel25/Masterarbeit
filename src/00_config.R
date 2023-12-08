@@ -44,7 +44,6 @@ library(sfnetworks)
 library(plyr)
 library(sp)
 library(RPostgres)
-library(RMariaDB)
 library(reticulate)
 library(purrr)
 ################################################################################

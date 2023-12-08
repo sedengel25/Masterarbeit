@@ -1,7 +1,7 @@
 ################################################################################
 # Big Data Analytics in Transportation (TU Dresden)
 # Master Thesis
-# This file contains all functions to execute 08_snn_postgis.R
+# This file contains all functions to execute 08_snn_local_node_dist_mat.R
 #############################################################################
 # Documentation: psql_change_geometry_type
 # Usage: psql_change_geometry_type(con, char_osm2po, crs)

@@ -6,34 +6,45 @@
 source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/00_config_psql.R")
-source("./src/11_utils.R")
+source("./src/10_utils.R")
 
-
+################################################################################
+# Configuration
+################################################################################
 char_city_prefix <- "col"
+int_buffer <- 5000
+int_m <- 5
+int_k <- 45
+int_simulations <- 1
+int_alpha <- 0.05
+
+
 char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
 char_osm2po_points <- paste0(char_city_prefix, "_2po_4pgr_points")
+char_origin_rand <- paste0(char_city_prefix, "_origin_rand", char_pow_tod)
+char_dest_rand <- paste0(char_city_prefix, "_dest_rand", char_pow_tod)
+char_origin_nd_rand <- paste0(char_city_prefix, "_origin_nds_rand", char_pow_tod)
+char_dest_nd_rand <- paste0(char_city_prefix, "_dest_nds_rand", char_pow_tod)
+char_dist_mat_red_no_dup <-
+	paste0(char_city_prefix, "_", int_buffer, "_dist_mat_red_no_dup")
+
 char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
-char_random_o_points <- paste0(char_city_prefix, "_random_o_points")
-char_random_d_points <- paste0(char_city_prefix, "_random_d_points")
-char_random_o_nd <- paste0(char_city_prefix, "_random_o_nd")
-char_random_d_nd <- paste0(char_city_prefix, "_random_d_nd")
-char_random_flow_nd <- paste0(char_city_prefix, "_random_flow_nd")
-char_random_k_nearest_flows <- paste0(char_city_prefix, "_random_k_nearest_flows")
-char_random_common_flows <- paste0(char_city_prefix, "_random_common_flows")
+char_flows_nd_rand <- paste0(char_city_prefix, "_flows_nd_rand")
+char_k_nearest_flows_rand <- paste0(char_city_prefix, "_k_nearest_flows_rand")
+char_common_flows_rand <- paste0(char_city_prefix, "_common_flows_rand")
+char_reachable_rand <- paste0(char_city_prefix, "_reachable_flows_rand")
+char_flows_pvalues_rand <- paste0(char_city_prefix, "_flows_pvalues_rand")
+
 char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
-char_random_reachable_flows <- paste0(char_city_prefix, "_random_reachable_flows")
-char_dist_mat_red_no_dup <- paste0(char_city_prefix, "_dist_mat_red_no_dup")
-char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
-int_m <- 5
-int_k <- 20
-int_simulations <- 10
-int_alpha <- 0.05
+
+
+
 # Create points on road network every x meter
-# psql_create_random_od_points(con, m = int_m, table_network = char_osm2po_subset,
-# 														 table_all_points = char_osm2po_points)
-# 
-# 
-# psql_create_index(con, char_osm2po_points, col = c("id", "line_id"))
+psql_create_random_od_points(con, m = int_m, table_network = char_osm2po_subset,
+														 table_all_points = char_osm2po_points)
+
+
+psql_create_index(con, char_osm2po_points, col = c("id", "line_id"))
 
 
 # Get number of points created:
@@ -51,7 +62,7 @@ int_max_flow_n <- psql_get_max_of_num_col(con,
 int_max_flow <- max(int_max_flow_m, int_max_flow_n)
 
 ################################################################################
-# START MONTECARLO-SIMULATION
+# Montecarlo-Simulation
 ################################################################################
 # 1. Choose random points using 'sample' to select OD-Points from created table
 
@@ -61,24 +72,20 @@ for(rep in 1:int_simulations){
 	int_rand_origin <- sample(int_max_id, int_max_flow)
 	int_rand_dest <- sample(int_max_id, int_max_flow)
 	
-	# query <- "SET work_mem = '1GB';"
-	# dbExecute(con, query)
-	# query <- "SET maintenance_work_mem = '1GB';"
-	# dbExecute(con, query)
 	# Create tables for OD-points
 	psql_create_table_random_od_points(con, 
-																		 table_random_od_points = char_random_o_points,
+																		 table_random_od_points = char_origin_rand,
 																		 table_all_points = char_osm2po_points,
 																		 random_indices = int_rand_origin)
 	
-	psql_create_index(con, char_random_o_points, col = c("id", "line_id"))
+	psql_create_index(con, char_origin_rand, col = c("id", "line_id"))
 	
 	
 	psql_create_table_random_od_points(con, 
-																		 table_random_od_points = char_random_d_points,
+																		 table_random_od_points = char_dest_rand,
 																		 table_all_points = char_osm2po_points,
 																		 random_indices = int_rand_dest)
-	psql_create_index(con, char_random_d_points, col = c("id", "line_id"))
+	psql_create_index(con, char_dest_rand, col = c("id", "line_id"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
@@ -86,31 +93,31 @@ for(rep in 1:int_simulations){
 	# 2. Calc. ND between O-points and D-points
 	start_time <- Sys.time()
 	psql_calc_nd(con = con,
-							 table_mapped_points = char_random_o_points,
+							 table_mapped_points = char_origin_rand,
 							 table_network = char_osm2po_subset,
 							 table_dist_mat =  char_dist_mat_red_no_dup,
-							 table_nd =  char_random_o_nd)
+							 table_nd =  char_origin_nd_rand)
 	
-	psql_create_index(con, char_random_o_nd, col = c("o_m", "o_n"))
+	psql_create_index(con, char_origin_nd_rand, col = c("o_m", "o_n"))
 	
 	
 	psql_calc_nd(con = con,
-							 table_mapped_points = char_random_d_points,
+							 table_mapped_points = char_dest_rand,
 							 table_network = char_osm2po_subset,
 							 table_dist_mat =  char_dist_mat_red_no_dup,
-							 table_nd =  char_random_d_nd)
+							 table_nd =  char_dest_nd_rand)
 	
 	query <- paste0("ALTER TABLE ",
-									char_random_d_nd,
+									char_dest_nd_rand,
 									" RENAME COLUMN o_m TO d_m;")
 	dbExecute(con, query)
 	
 	query <- paste0("ALTER TABLE ",
-									char_random_d_nd,
+									char_dest_nd_rand,
 									" RENAME COLUMN o_n TO d_n;")
 	dbExecute(con, query)
 	
-	psql_create_index(con, char_random_d_nd, col = c("d_m", "d_n"))
+	psql_create_index(con, char_dest_nd_rand, col = c("d_m", "d_n"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
@@ -118,10 +125,10 @@ for(rep in 1:int_simulations){
 	# 3. Calc. ND between flows
 	start_time <- Sys.time()
 	psql_calc_flow_nds(con = con,
-										 table_o_nds = char_random_o_nd,
-										 table_d_nds = char_random_d_nd,
-										 table_flow_nds = char_random_flow_nd)
-	psql_create_index(con, char_random_flow_nd, col = c("flow_m", "flow_n"))
+										 table_o_nds = char_origin_nd_rand,
+										 table_d_nds = char_dest_nd_rand,
+										 table_flow_nds = char_flows_nd_rand)
+	psql_create_index(con, char_flows_nd_rand, col = c("flow_m", "flow_n"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
@@ -130,9 +137,9 @@ for(rep in 1:int_simulations){
 	start_time <- Sys.time()
 	psql_get_k_nearest_flows(con = con,
 													 k = int_k,
-													 table_flows = char_random_flow_nd,
-													 table_k_nearest_flows = char_random_k_nearest_flows)
-	psql_create_index(con, char_random_k_nearest_flows, col = c("flow_ref", "flow_other"))
+													 table_flows = char_flows_nd_rand,
+													 table_k_nearest_flows = char_k_nearest_flows_rand)
+	psql_create_index(con, char_k_nearest_flows_rand, col = c("flow_ref", "flow_other"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
@@ -140,9 +147,9 @@ for(rep in 1:int_simulations){
 	# 5. Calc. common flows
 	start_time <- Sys.time()
 	psql_get_number_of_common_flows(con = con,
-																	table_k_nearest_flows = char_random_k_nearest_flows,
-																	table_common_flows = char_random_common_flows)
-	psql_create_index(con, char_random_common_flows, col = c("flow1", "flow2"))
+																	table_k_nearest_flows = char_k_nearest_flows_rand,
+																	table_common_flows = char_common_flows_rand)
+	psql_create_index(con, char_common_flows_rand, col = c("flow1", "flow2"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
@@ -151,16 +158,14 @@ for(rep in 1:int_simulations){
 	start_time <- Sys.time()
 	psql_get_number_directly_reachable_flows(con = con,
 																					 k = int_k,
-																					 table_common_flows = char_random_common_flows,
-																					 table_reachable_flows = char_random_reachable_flows)
-	psql_create_index(con, char_random_reachable_flows, col = c("flow1"))
+																					 table_common_flows = char_common_flows_rand,
+																					 table_reachable_flows = char_reachable_rand)
+	psql_create_index(con, char_reachable_rand, col = c("flow1"))
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("directly-reachable-column added")
-	# psql_get_max_of_num_col(con, num_col = 'flow1', table = char_reachable)
-	# psql_count_rows(con, char_random_reachable_flows) 
-	
+
 	start_time <- Sys.time()
 	if(rep==1){
 		query <- paste0("DROP TABLE IF EXISTS ", char_flows_pvalues)
@@ -181,21 +186,21 @@ for(rep in 1:int_simulations){
 		dbExecute(con, query)
 		psql_create_index(con, char_flows_pvalues, col = c("flow1"))
 	}
-
+	
 	psql_compare_directly_reachable(
 		con = con,
 		table_reachable_flows = char_reachable,
-		table_random_reachable_flows = char_random_reachable_flows,
+		table_random_reachable_flows = char_reachable_rand,
 		table_reachable_flows_compared = char_flows_pvalues)
 	
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("SNN-Densities compared & table updated")
-	query <- paste0("DROP TABLE IF EXISTS ", char_random_reachable_flows)
+	query <- paste0("DROP TABLE IF EXISTS ", char_reachable_rand)
 	dbExecute(con, query)
 }
 ################################################################################
-# END MONTECARLO-SIMULATION
+# Calculate p-values
 ################################################################################
 # After last round of MSC, divide 'density' by '1+R'
 query <- paste0("ALTER TABLE ",
@@ -204,8 +209,8 @@ query <- paste0("ALTER TABLE ",
 dbExecute(con, query)
 
 query <- paste0("UPDATE ", char_flows_pvalues,
-" SET density = density / ", 
-int_simulations,";")
+								" SET density = density / ", 
+								int_simulations,";")
 dbExecute(con, query)
 
 # Add column 'core_flow'
