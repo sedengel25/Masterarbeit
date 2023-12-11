@@ -12,34 +12,22 @@ source("./src/10_utils.R")
 # Configuration
 ################################################################################
 char_city_prefix <- "col"
+char_pow_tod <- "wd_m"
 int_buffer <- 5000
 int_m <- 5
-int_k <- 45
-int_simulations <- 1
+int_k <- 25
+int_simulations <- 99
 int_alpha <- 0.05
 
 
+
+################################################################################
+# Create points on road network every 'int_m' meters
+################################################################################
 char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
 char_osm2po_points <- paste0(char_city_prefix, "_2po_4pgr_points")
-char_origin_rand <- paste0(char_city_prefix, "_origin_rand", char_pow_tod)
-char_dest_rand <- paste0(char_city_prefix, "_dest_rand", char_pow_tod)
-char_origin_nd_rand <- paste0(char_city_prefix, "_origin_nds_rand", char_pow_tod)
-char_dest_nd_rand <- paste0(char_city_prefix, "_dest_nds_rand", char_pow_tod)
-char_dist_mat_red_no_dup <-
-	paste0(char_city_prefix, "_", int_buffer, "_dist_mat_red_no_dup")
-
 char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
-char_flows_nd_rand <- paste0(char_city_prefix, "_flows_nd_rand")
-char_k_nearest_flows_rand <- paste0(char_city_prefix, "_k_nearest_flows_rand")
-char_common_flows_rand <- paste0(char_city_prefix, "_common_flows_rand")
-char_reachable_rand <- paste0(char_city_prefix, "_reachable_flows_rand")
-char_flows_pvalues_rand <- paste0(char_city_prefix, "_flows_pvalues_rand")
 
-char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
-
-
-
-# Create points on road network every x meter
 psql_create_random_od_points(con, m = int_m, table_network = char_osm2po_subset,
 														 table_all_points = char_osm2po_points)
 
@@ -64,15 +52,28 @@ int_max_flow <- max(int_max_flow_m, int_max_flow_n)
 ################################################################################
 # Montecarlo-Simulation
 ################################################################################
-# 1. Choose random points using 'sample' to select OD-Points from created table
+char_origin_rand <- paste0(char_city_prefix, "_origin_rand", char_pow_tod)
+char_dest_rand <- paste0(char_city_prefix, "_dest_rand", char_pow_tod)
+char_origin_nd_rand <- paste0(char_city_prefix, "_origin_nds_rand", char_pow_tod)
+char_dest_nd_rand <- paste0(char_city_prefix, "_dest_nds_rand", char_pow_tod)
+char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
+char_flows_nd_rand <- paste0(char_city_prefix, "_flows_nd_rand")
+char_k_nearest_flows_rand <- paste0(char_city_prefix, "_k_nearest_flows_rand")
+char_common_flows_rand <- paste0(char_city_prefix, "_common_flows_rand")
+char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
+char_reachable_rand <- paste0(char_city_prefix, "_reachable_flows_rand")
+char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
+char_flows_pvalues_rand <- paste0(char_city_prefix, "_flows_pvalues_rand")
+
 
 for(rep in 1:int_simulations){
 	cat("Rep: ",rep, "\n")
 	start_time <- Sys.time()
+	
+	# 1. Choose random points using 'sample' to select OD-Points from created table
 	int_rand_origin <- sample(int_max_id, int_max_flow)
 	int_rand_dest <- sample(int_max_id, int_max_flow)
-	
-	# Create tables for OD-points
+
 	psql_create_table_random_od_points(con, 
 																		 table_random_od_points = char_origin_rand,
 																		 table_all_points = char_osm2po_points,
@@ -95,7 +96,7 @@ for(rep in 1:int_simulations){
 	psql_calc_nd(con = con,
 							 table_mapped_points = char_origin_rand,
 							 table_network = char_osm2po_subset,
-							 table_dist_mat =  char_dist_mat_red_no_dup,
+							 table_dist_mat =  char_dist_mat,
 							 table_nd =  char_origin_nd_rand)
 	
 	psql_create_index(con, char_origin_nd_rand, col = c("o_m", "o_n"))
@@ -104,7 +105,7 @@ for(rep in 1:int_simulations){
 	psql_calc_nd(con = con,
 							 table_mapped_points = char_dest_rand,
 							 table_network = char_osm2po_subset,
-							 table_dist_mat =  char_dist_mat_red_no_dup,
+							 table_dist_mat =  char_dist_mat,
 							 table_nd =  char_dest_nd_rand)
 	
 	query <- paste0("ALTER TABLE ",
@@ -122,6 +123,7 @@ for(rep in 1:int_simulations){
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("NDs between OD-points calculated")
+	
 	# 3. Calc. ND between flows
 	start_time <- Sys.time()
 	psql_calc_flow_nds(con = con,
@@ -133,7 +135,8 @@ for(rep in 1:int_simulations){
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("NDs between flows calculated")
-	# 4. Get k nearest flows
+	
+	# 4. Get knn-flows
 	start_time <- Sys.time()
 	psql_get_k_nearest_flows(con = con,
 													 k = int_k,
@@ -144,6 +147,7 @@ for(rep in 1:int_simulations){
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("Table with k nearest flows created")
+	
 	# 5. Calc. common flows
 	start_time <- Sys.time()
 	psql_get_number_of_common_flows(con = con,
@@ -154,6 +158,7 @@ for(rep in 1:int_simulations){
 	end_time <- Sys.time()
 	print(difftime(end_time, start_time, units = "mins"))
 	print("Table with common flows created")
+	
 	# 6. Calc. directly-reachable flows
 	start_time <- Sys.time()
 	psql_get_number_directly_reachable_flows(con = con,
@@ -210,7 +215,7 @@ dbExecute(con, query)
 
 query <- paste0("UPDATE ", char_flows_pvalues,
 								" SET density = density / ", 
-								int_simulations,";")
+								int_simulations + 1,";")
 dbExecute(con, query)
 
 # Add column 'core_flow'

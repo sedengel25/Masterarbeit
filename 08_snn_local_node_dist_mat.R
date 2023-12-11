@@ -14,20 +14,16 @@ source("./src/08_utils.R")
 ################################################################################
 int_crs <- 32632
 int_buffer <- 5000
-char_city_prefix <- "col"
 char_city <- "cologne"
-char_osm2po <- paste0(char_city_prefix, "_2po_4pgr")
-char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
+char_city_prefix <- "col"
 
-char_shp <- paste0(char_city_prefix, "_stadtgrenzen_shp")
-char_bbox <- paste0(char_city_prefix, "_bbox")
 
-char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
-char_dist_mat_red <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red")
-char_dist_mat_red_no_dup <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red_no_dup")
+
 ################################################################################
 # Use osm2po to create a network as psql-table
 ################################################################################
+char_osm2po <- paste0(char_city_prefix, "_2po_4pgr")
+char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
 char_bat_file <- paste0(char_city, ".bat")
 
 # Executing the bat-file of the chosen city creates a sql file with all edges
@@ -47,6 +43,9 @@ psql_update_srid(con, table = char_osm2po, crs = int_crs)
 ################################################################################
 # Create smaller bounding-box for huge network
 ################################################################################
+char_shp <- paste0(char_city_prefix, "_stadtgrenzen_shp")
+char_bbox <- paste0(char_city_prefix, "_bbox")
+
 # Use shp2pgsql to turn shapefile of city's borders in psql-table
 char_cmd_psql_shp_to_sql <- sprintf('"%s" -I -s %s "%s" public.%s > "%s"',
 																		path_shp2psql_exe,
@@ -83,6 +82,10 @@ psql_create_index(con, table  = char_osm2po_subset,
 ################################################################################
 # Calculate local node distance matrix
 ################################################################################
+char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
+char_dist_mat_red <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red")
+char_dist_mat_red_no_dup <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red_no_dup")
+
 dt <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%
 	mutate(m = km*1000) %>%
 	select(id, source, target, m)
@@ -143,3 +146,7 @@ psql_create_index(con,
 									col = c("source, target"))
 
 
+# Rename table
+psql_rename_table(con,
+									table_old_name = char_dist_mat_red_no_dup,
+									table_new_name = char_dist_mat)

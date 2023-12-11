@@ -14,7 +14,8 @@ source("./src/09_utils.R")
 ################################################################################
 int_crs <- 32632
 char_city_prefix <- "col"
-char_vis <- paste0(char_city_prefix, "_vis_flows")
+char_pow_tod <- "wd_m"
+# char_vis <- paste0(char_city_prefix, "_vis_flows")
 
 
 
@@ -44,7 +45,7 @@ dt <- dt %>%
 
 
 
-char_pow_tod <- "wd_m"
+
 dt <- dt %>%
 	filter(pow_tod == char_pow_tod)
 
@@ -57,9 +58,9 @@ char_origin <- paste0(char_city_prefix, "_origin_", char_pow_tod)
 char_dest <- paste0(char_city_prefix, "_dest_", char_pow_tod)
 char_origin_mapped <- paste0(char_city_prefix, "_origin_mapped_", char_pow_tod)
 char_dest_mapped <- paste0(char_city_prefix, "_dest_mapped_", char_pow_tod)
-char_dist_mat_red_no_dup <- paste0(char_city_prefix, "_dist_mat_red_no_dup")
 char_origin_nd <- paste0(char_city_prefix, "_origin_nds_", char_pow_tod)
 char_dest_nd <- paste0(char_city_prefix, "_dest_nds_", char_pow_tod)
+char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
 
 
 # Create 2 psql-table for OD-points
@@ -124,6 +125,8 @@ psql_calc_nd(con = con,
 						 table_dist_mat =  char_dist_mat_red_no_dup,
 						 table_nd =  char_dest_nd)
 
+
+# Rename columns from 'o_m' and 'o_n' to 'd_m' and 'd_n'
 query <- paste0("ALTER TABLE ",
 								char_dest_nd,
 								" RENAME COLUMN o_m TO d_m;")
@@ -149,6 +152,10 @@ psql_drop_old_if_new_exists(con,
 
 psql_create_index(con, table = char_origin_nd_no_dup, col = c("o_m", "o_n"))
 
+psql_rename_table(con, 
+									table_old_name = char_origin_nd_no_dup,
+									table_new_name = char_origin_nd)
+
 # Remove duplicates of NDs of destination points
 psql_remove_duplicates(con, old_table = char_dest_nd,
 											 new_table = char_dest_nd_no_dup,
@@ -161,11 +168,12 @@ psql_drop_old_if_new_exists(con,
 psql_create_index(con, table = char_dest_nd_no_dup, col = c("d_m", "d_n"))
 
 
-
-
+psql_rename_table(con, 
+									table_old_name = char_dest_nd_no_dup,
+									table_new_name = char_dest_nd)
 # Create table with flow-nd-distances
-psql_calc_flow_nds(con, table_o_nds = char_origin_nd_no_dup,
-									 table_d_nds = char_dest_nd_no_dup,
+psql_calc_flow_nds(con, table_o_nds = char_origin_nd,
+									 table_d_nds = char_dest_nd,
 									 table_flow_nds = char_flows_nd)
 
 
@@ -189,7 +197,10 @@ dt_rkd <- create_rkd_dt(con,
 ggplot() +
 	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
 
-int_k <- 45
+# Result of rkd-plot:
+int_k <- 30
+
+
 char_k_nearest_flows <- paste0(char_city_prefix, "_", int_k, "_nearest_flows")
 char_reachable <- paste0(char_city_prefix, "_", int_k, "_numb_reachable_flows")
 char_common_flows <- paste0(char_city_prefix, "_", int_k, "_common_flows")

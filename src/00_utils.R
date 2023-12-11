@@ -480,6 +480,21 @@ psql_update_srid <- function(con, table, crs) {
 	dbExecute(con, query)
 }
 
+
+# Documentation: psql_rename_table
+# Usage: psql_rename_table(con, table_old_name, table_new_name)
+# Description: Renames table
+# Args/Options: con, table_old_name, table_new_name
+# Returns: ...
+# Output: ...
+# Action: Executing a psql-query
+psql_rename_table <- function(con, table_old_name, table_new_name){
+	query <- paste0("ALTER TABLE ", table_old_name,
+									" RENAME TO ",table_new_name, ";")
+	dbExecute(con, query)
+}
+
+
 # Documentation: cmd_write_sql_file
 # Usage: cmd_write_sql_file(char_cmd_psql_shp_to_sql)
 # Description: Writes sql file based on temp batch-file
@@ -509,3 +524,8 @@ cmd_execute_sql_file <- function(path_to_sql_file) {
 	system(cmd_psql)
 	Sys.unsetenv("PGPASSWORD")
 }
+
+
+
+
+
