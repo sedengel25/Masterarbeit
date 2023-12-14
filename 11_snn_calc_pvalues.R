@@ -6,7 +6,7 @@
 source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/00_config_psql.R")
-source("./src/10_utils.R")
+source("./src/11_utils.R")
 
 ################################################################################
 # Configuration
@@ -15,7 +15,7 @@ char_city_prefix <- "col"
 char_pow_tod <- "wd_m"
 int_buffer <- 5000
 int_m <- 5
-int_k <- 25
+int_k <- 30
 int_simulations <- 99
 int_alpha <- 0.05
 
@@ -52,15 +52,15 @@ int_max_flow <- max(int_max_flow_m, int_max_flow_n)
 ################################################################################
 # Montecarlo-Simulation
 ################################################################################
-char_origin_rand <- paste0(char_city_prefix, "_origin_rand", char_pow_tod)
-char_dest_rand <- paste0(char_city_prefix, "_dest_rand", char_pow_tod)
-char_origin_nd_rand <- paste0(char_city_prefix, "_origin_nds_rand", char_pow_tod)
-char_dest_nd_rand <- paste0(char_city_prefix, "_dest_nds_rand", char_pow_tod)
+char_origin_rand <- paste0(char_city_prefix, "_origin_rand_", char_pow_tod)
+char_dest_rand <- paste0(char_city_prefix, "_dest_rand_", char_pow_tod)
+char_origin_nd_rand <- paste0(char_city_prefix, "_origin_nds_rand_", char_pow_tod)
+char_dest_nd_rand <- paste0(char_city_prefix, "_dest_nds_rand_", char_pow_tod)
 char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
 char_flows_nd_rand <- paste0(char_city_prefix, "_flows_nd_rand")
 char_k_nearest_flows_rand <- paste0(char_city_prefix, "_k_nearest_flows_rand")
 char_common_flows_rand <- paste0(char_city_prefix, "_common_flows_rand")
-char_reachable <- paste0(char_city_prefix, "_numb_reachable_flows")
+char_reachable <- paste0(char_city_prefix, "_", int_k, "_numb_reachable_flows")
 char_reachable_rand <- paste0(char_city_prefix, "_reachable_flows_rand")
 char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
 char_flows_pvalues_rand <- paste0(char_city_prefix, "_flows_pvalues_rand")

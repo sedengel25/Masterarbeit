@@ -42,12 +42,12 @@ dt_table <- list_of_dt$dt_table
 # 	scale_y_discrete(limits = c("VOI", "BOLT", "TIER")) +
 # 	labs(x = "date", y = "provider") 
 # 
-# ggsave(path_dt_plot, plot = overview_data, 
+# ggsave(file_rds_dt_plot, plot = overview_data, 
 # 			 width = 30, height = 20, units = "cm")
 
 
 # Save data --------------------------------------
-write_rds(x = dt_table, file = path_dt_table)
+write_rds(x = dt_table, file = file_rds_dt_table)
 
 
 

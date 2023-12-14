@@ -13,6 +13,7 @@ source("./src/09_utils.R")
 # Configuration
 ################################################################################
 int_crs <- 32632
+int_buffer <- 5000
 char_city_prefix <- "col"
 char_pow_tod <- "wd_m"
 # char_vis <- paste0(char_city_prefix, "_vis_flows")
@@ -22,8 +23,8 @@ char_pow_tod <- "wd_m"
 ################################################################################
 # Read in clean scooter data
 ################################################################################
-dt <- get_cleaned_trip_data(path_clean = path_dt_clustered_voi_cologne_06_05,
-														path_org = path_dt_voi_cologne_06_05)
+dt <- get_cleaned_trip_data(path_clean = file_rds_dt_clustered_voi_cologne_06_05,
+														path_org = file_rds_dt_voi_cologne_06_05)
 
 dt <- dt %>%
 	mutate(
@@ -114,7 +115,7 @@ dt_mapped_dest <- RPostgres::dbReadTable(con, char_dest_mapped) %>%
 psql_calc_nd(con = con,
 						table_mapped_points = char_origin_mapped,
 						table_network = char_osm2po_subset,
-						table_dist_mat =  char_dist_mat_red_no_dup,
+						table_dist_mat =  char_dist_mat,
 						table_nd =  char_origin_nd)
 psql_create_index(con, table = char_origin_nd, col = c("o_m", "o_n"))
 
@@ -122,7 +123,7 @@ psql_create_index(con, table = char_origin_nd, col = c("o_m", "o_n"))
 psql_calc_nd(con = con,
 						 table_mapped_points = char_dest_mapped,
 						 table_network = char_osm2po_subset,
-						 table_dist_mat =  char_dist_mat_red_no_dup,
+						 table_dist_mat =  char_dist_mat,
 						 table_nd =  char_dest_nd)
 
 
@@ -191,31 +192,16 @@ int_k_max <- 60
 # 														city_prefix = char_city_prefix,
 # 														table_flows_nd = char_flows_nd)
 
-dt_rkd <- create_rkd_dt(con, 
-												k_max = int_k_max, 
-												city_prefix = char_city_prefix)
-ggplot() +
-	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
+# dt_rkd <- create_rkd_dt(con, 
+# 												k_max = int_k_max, 
+# 												city_prefix = char_city_prefix)
+# ggplot() +
+# 	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
 
 # Result of rkd-plot:
 int_k <- 30
+dir.create(dirname(file_rds_int_k), recursive = TRUE, showWarnings = FALSE)
+write_rds(int_k, file_rds_int_k)
 
-
-char_k_nearest_flows <- paste0(char_city_prefix, "_", int_k, "_nearest_flows")
-char_reachable <- paste0(char_city_prefix, "_", int_k, "_numb_reachable_flows")
-char_common_flows <- paste0(char_city_prefix, "_", int_k, "_common_flows")
-
-# Get number of common flows for each flow combination
-psql_get_number_of_common_flows(con, 
-																table_k_nearest_flows = char_k_nearest_flows,
-																table_common_flows = char_common_flows)
-
-psql_create_index(con, char_common_flows, col = c("flow1", "flow2", "common_flows"))
-
-
-# Get number of directly reachable flows
-psql_get_number_directly_reachable_flows(con, k = int_k, 
-																				 table_common_flows = char_common_flows,
-																				 table_reachable_flows = char_reachable)
 
 

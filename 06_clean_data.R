@@ -7,7 +7,7 @@ source("./src/00_config.R")
 source("./src/00_utils.R")
 source("./src/06_utils.R")
 
-dt <- read_rds(path_dt_charge_voi_cologne_06_05)
+dt <- read_rds(file_rds_dt_charge_voi_cologne_06_05)
 
 dt_id <- dt %>%
 	select(id, ride)
@@ -170,34 +170,7 @@ dt_id <- dt_id %>%
 dt_id <- dt_id %>%
 	filter(cluster != 8) 
 
-write_rds(dt_id, path_dt_clustered_voi_cologne_06_05)
-
-
-###############################################################################
-# Spatial
-################################################################################
-# sf_lines <- create_sf_start_dest_lines(dt = dt_reloc)
-# 
-# leaflet_map <- create_berlin_leaflet_map()
-# 
-# leaflet_trips <- leaflet_map %>% addPolylines(data = sf_lines)
-# leaflet_trips
-
-
-
-# sf_points <- st_as_sf(dt_most_trips,
-# 											coords = c("start_loc_lon", "start_loc_lat"),
-# 											crs = 4326)
-# 
-# shp_berlin <- st_read(path_shp_file_berlin)
-# 
-# sf_points_to_district <- st_join(sf_points, shp_berlin)
-# 
-# dt_trips_assigned_to_district <- as.data.table(sf_points_to_district) %>%
-# 	select(Gemeinde_s, distance, duration) %>%
-# 	mutate(Gemeinde_s = int_vec <- as.integer(sub("^0+", "", Gemeinde_s)))
-
-
+write_rds(dt_id, file_rds_dt_clustered_voi_cologne_06_05)
 
 
 ################################################################################
@@ -226,16 +199,5 @@ ggplot_line_weekday <- create_weekday_plot(dt = dt_trips_per_wd)
 ggplot_line_date <- create_date_plot(dt = dt_trips_per_date)
 
 ggplot_line_date_wd <- create_date_and_wd_plot(dt = dt_trips_per_date_wd)
-
-
-
-
-#############################################################################
-# Ablage
-################################################################################
-
-
-
-
 
 

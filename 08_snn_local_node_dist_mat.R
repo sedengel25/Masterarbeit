@@ -8,6 +8,35 @@ source("./src/00_utils.R")
 source("./src/00_config_psql.R")
 source("./src/08_utils.R")
 
+# i <- 1
+# for(file in c("10_snn_calc_pvalues.R",
+# 							"src/00_config_psql.R",
+# 							"src/10_utils.R")){
+# 	if(i == 1){
+# 		df <- get_packages_used(file = file)
+# 		print(df)
+# 		i <- i + 1
+# 	} else {
+# 		df <- rbind(df, get_packages_used(file = file))
+# 		i <- i + 1
+# 	}
+# 
+# }
+# 
+# df_expanded <- df %>%
+# 	mutate(Paket = strsplit(as.character(Paket), ",")) %>%
+# 	unnest(Paket) %>%
+# 	mutate(Paket = gsub("c\\(|\\)|\"", "", Paket)) %>%
+# 	separate_rows(Paket, sep = "\\s+") %>%
+# 	filter(Paket != "") %>%
+# 	as.data.table
+# 
+# packages <- unique(df_expanded$Paket)
+# packages[which(packages!=c(".GlobalEnv", 
+# 														 "package:base", 
+# 														 "package:stats",
+# 														 "package:utils",
+# 														 "character(0"))]
 
 ################################################################################
 # Configuration
@@ -48,15 +77,16 @@ char_bbox <- paste0(char_city_prefix, "_bbox")
 
 # Use shp2pgsql to turn shapefile of city's borders in psql-table
 char_cmd_psql_shp_to_sql <- sprintf('"%s" -I -s %s "%s" public.%s > "%s"',
-																		path_shp2psql_exe,
+																		file_exe_shp2psql,
 																		int_crs,
-																		path_shp_col,
+																		file_shp_col,
 																		char_shp,
-																		path_sql_col
+																		file_sql_col
 )
+
 cmd_write_sql_file(char_cmd_psql_shp_to_sql)
 psql_drop_table_if_exists(con, char_shp)
-cmd_execute_sql_file(path_sql_col)
+cmd_execute_sql_file(file_sql_col)
 
 
 psql_create_bbox(con, table_shp = char_shp, table_bbox = char_bbox)
@@ -91,10 +121,10 @@ dt <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%
 	select(id, source, target, m)
 
 # Connect to miniconda to execute Python code
-conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
+reticulate::conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
 
 # Import functions from python library networkx
-source_python("src/import_py_dijkstra_functions.py")
+reticulate::source_python("src/import_py_dijkstra_functions.py")
 
 # Create a graph from the sub street network
 g <- from_pandas_edgelist(df = dt,
@@ -150,3 +180,11 @@ psql_create_index(con,
 psql_rename_table(con,
 									table_old_name = char_dist_mat_red_no_dup,
 									table_new_name = char_dist_mat)
+
+
+
+cmd_write_sql_dump(table = char_osm2po_subset, 
+									 data_sub_folder = path_processed_data_8)
+
+cmd_write_sql_dump(table = char_dist_mat, 
+									 data_sub_folder = path_processed_data_8)

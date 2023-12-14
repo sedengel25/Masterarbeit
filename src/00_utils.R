@@ -519,7 +519,7 @@ cmd_write_sql_file <- function(char_cmd_psql_shp_to_sql) {
 cmd_execute_sql_file <- function(path_to_sql_file) {
 	Sys.setenv(PGPASSWORD = pw)
 	cmd_psql <- sprintf('"%s" -h %s -p %s -d %s -U %s -f "%s"', 
-											path_psql_exe, host, port, dbname, user, path_to_sql_file)
+											file_exe_psql, host, port, dbname, user, path_to_sql_file)
 	
 	system(cmd_psql)
 	Sys.unsetenv("PGPASSWORD")
@@ -527,5 +527,53 @@ cmd_execute_sql_file <- function(path_to_sql_file) {
 
 
 
+# Documentation: get_packages_used
+# Usage: get_packages_used(file)
+# Description: Analyszes the functions used in the provided file
+# Args/Options: file
+# Returns: dataframe
+# Output: ...
+# Action: ...
+get_packages_used <- function(file) {
+	list_packages <- list.functions.in.file(file, 
+																					alphabetic = TRUE) 
+	
+	list_packages_long <- lapply(names(list_packages), function(x) {
+		data.frame(Paket = x, Funktion = list_packages[[x]], stringsAsFactors = FALSE)
+	})
+	
+	df <- do.call(rbind, list_packages_long)
+	
+	return(df)
+}
 
 
+# Documentation: cmd_write_sql_dump
+# Usage: cmd_write_sql_dump(table, data_sub_folder)
+# Description: Creates sql-dump of table and writes to dockerbuild
+# Args/Options: table, data_sub_folder
+# Returns: ...
+# Output: ...
+# Action: Executes cmd statement
+cmd_write_sql_dump <- function(table, data_sub_folder) {
+	char_batch <- paste0(
+		' "',
+		path_pg_dump_exe,
+		'" ',
+		" -h ", host, 
+		" -U ", user,
+		" -d ", dbname,
+		" -t ", table,
+		' > "', paste0(path_dockerbuild, "data/", table, ".sql"),
+		'"'
+	)
+	char_batch <- gsub("\t|\n", "", char_batch)
+	cat(char_batch)
+	path_batch_dist_mat <- here::here(data_sub_folder,
+																		paste0(table, ".bat"))
+	write(char_batch, path_batch_dist_mat)
+	
+	Sys.setenv(PGPASSWORD = pw)
+	system(path_batch_dist_mat)
+	Sys.unsetenv("PGPASSWORD")
+}

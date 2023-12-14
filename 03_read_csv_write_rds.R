@@ -13,7 +13,7 @@ source("./src/03_utils.R")
 list_of_files <- list.files(path_processed_data_1)
 
 # Choose the files you want to read in, based on the overview
-dt_table <- read_rds(path_dt_table)
+dt_table <- read_rds(file_rds_dt_table)
 
 
 list_of_ids <- choose_datasets(dt = dt_table,
@@ -31,5 +31,5 @@ head(dt)
 ################################################################################
 # Save data
 ################################################################################
-write_rds(x = dt, file = path_dt_tier_munich_09_13)
+write_rds(x = dt, file = file_rds_dt_tier_munich_09_13)
 

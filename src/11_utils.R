@@ -1,7 +1,7 @@
 ################################################################################
 # Big Data Analytics in Transportation (TU Dresden)
 # Master Thesis
-# This file contains all functions to execute 10_snn_calc_pvalues.R
+# This file contains all functions to execute 11_snn_calc_pvalues.R
 #############################################################################
 # Documentation: psql_create_random_od_points
 # Usage: psql_create_random_od_points(con, table_network, table_all_points)

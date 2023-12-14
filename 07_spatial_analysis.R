@@ -9,8 +9,8 @@ source("./src/07_utils.R")
 
 
 # Read in clean data
-dt_clean <- read_rds(path_dt_clustered_bolt_berlin_06_05)
-dt_org <- read_rds(path_dt_bolt_berlin_06_05)
+dt_clean <- read_rds(file_rds_dt_clustered_bolt_berlin_06_05)
+dt_org <- read_rds(file_rds_dt_bolt_berlin_06_05)
 
 
 
