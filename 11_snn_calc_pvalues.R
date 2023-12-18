@@ -14,8 +14,9 @@ source("./src/11_utils.R")
 char_city_prefix <- "col"
 char_pow_tod <- "wd_m"
 int_buffer <- 5000
-int_m <- 5
 int_k <- 30
+
+int_m <- 5
 int_simulations <- 99
 int_alpha <- 0.05
 
@@ -161,6 +162,7 @@ for(rep in 1:int_simulations){
 	
 	# 6. Calc. directly-reachable flows
 	start_time <- Sys.time()
+
 	psql_get_number_directly_reachable_flows(con = con,
 																					 k = int_k,
 																					 table_common_flows = char_common_flows_rand,

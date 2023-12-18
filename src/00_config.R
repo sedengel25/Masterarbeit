@@ -48,7 +48,7 @@ library(reticulate)
 library(purrr)
 library(deps)
 library(NCmisc)
-
+library(lwgeom)
 ################################################################################
 # Paths
 ################################################################################
@@ -71,6 +71,9 @@ path_processed_data_6 <- here::here("data/processed/06")
 path_processed_data_7 <- here::here("data/processed/07")
 path_processed_data_8 <- here::here("data/processed/08")
 path_processed_data_9 <- here::here("data/processed/09")
+path_processed_data_10 <- here::here("data/processed/10")
+path_processed_data_11 <- here::here("data/processed/11")
+path_processed_data_12 <- here::here("data/processed/12")
 
 
 path_feather_bolt_berlin_05_12 <-
@@ -95,6 +98,7 @@ path_dockerbuild <- "C:/dockerbuild/"
 path_output_07 <- here::here("output/07")
 path_output_08 <- here::here("output/08")
 path_output_09 <- here::here("output/09")
+path_output_12 <- here::here("output/12")
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
 ################################################################################
@@ -150,7 +154,8 @@ file_rds_sf_network_colgone <-
 file_rds_sf_origin <- here::here(path_processed_data_9, "sf_origin.rds")
 file_rds_rds_sf_dest <- here::here(path_processed_data_9, "sf_dest.rds")
 
-
+# 12
+file_csv_p_values <- here::here(path_processed_data_12, "p_values.csv")
 
 ### External data --------------------------------------------------------------
 file_exe_psql <- "C:/Program Files/PostgreSQL/16/bin/psql.exe"
