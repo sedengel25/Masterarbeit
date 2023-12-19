@@ -14,6 +14,8 @@ source("./src/12_utils.R")
 char_city_prefix <- "col"
 int_crs <- 32632
 int_k <- read_rds(file_rds_int_k)
+double_alpha <- 0.1
+char_alpha <- gsub("\\.", "", as.character(double_alpha))
 char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
 char_common_flows <- paste0(char_city_prefix, "_", int_k, "_common_flows")
 char_common_flows_dr_only <- paste0(char_city_prefix, 
@@ -28,6 +30,11 @@ char_cluster <- paste0(char_city_prefix, "_cluster")
 # 																					table_common_flows_dr_only = char_common_flows_dr_only)
 
 dt_flows <- read.csv(file_csv_p_values)
+for(i in 1:nrow(dt_flows)){
+	if(dt_flows[i, "density"] <= double_alpha){
+		dt_flows[i, "core_flow"] <- "yes"
+	}
+}
 # Add a column for cluster IDs and a flag for processed flows
 dt_flows$cluster_id <- NA
 dt_flows$processed <- FALSE
@@ -130,7 +137,10 @@ while (any(dt_flows$core_flow == 'yes' &
 }
 
 dt_flows_sel <- select(dt_flows, flow1, cluster_id)
-dbWriteTable(conn = con, name = char_cluster, value = dt_flows_sel, overwrite = TRUE)
+dt_flows_sel$cluster_id %>% table
+dt_flows_sel %>% summary
+dbWriteTable(conn = con, name = paste0(char_cluster, "_", char_alpha),
+						 value = dt_flows_sel, overwrite = TRUE)
 
 psql_add_cluster_id(con = con,
 										table_viz = char_viz,
@@ -144,11 +154,11 @@ psql_add_cluster_id(con = con,
 dt_viz <- st_read(con, char_viz)
 
 # Find unique cluster_ids
-int_unique_clusters <- unique(dt_viz$cluster_id)
+int_unique_clusters <- unique(dt_viz$cluster_id_01)
 
-dir.create(path_output_12, recursive = TRUE, showWarnings = FALSE)
+dir.create(here::here(path_output_12, double_alpha), recursive = TRUE, showWarnings = FALSE)
 # Loop over each unique cluster_id and write to a shapefile
-for(cluster in unique_clusters) {
+for(cluster in int_unique_clusters) {
 	if(is.na(cluster)){
 		next
 	}
@@ -160,6 +170,6 @@ for(cluster in unique_clusters) {
 	char_shp_filename <- paste0("cluster_", cluster, ".shp")
 
 	# Write the subset to a shapefile
-	st_write(dt_viz_sub, here::here(path_output_12, char_shp_filename))
+	st_write(dt_viz_sub, here::here(path_output_12, double_alpha, char_shp_filename))
 }
 

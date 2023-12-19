@@ -299,30 +299,40 @@ psql_get_k_nearest_flows <- function(con, k, table_flows, table_k_nearest_flows)
 # Output: ...
 # Action: psql-query
 psql_get_number_of_common_flows <- function(con, table_k_nearest_flows, table_common_flows) {
-	# table_k_nearest_flows = char_random_k_nearest_flows
-	# table_common_flows = char_random_common_flows
+
 	query <- paste0("DROP TABLE IF EXISTS ", table_common_flows)
 	dbExecute(con, query)
 	
-	query <- paste0("create table ", table_common_flows, " as
-  WITH ClosestFlows AS (
-    SELECT flow_ref, ARRAY_AGG(flow_other ORDER BY nd) AS closest_flows
-    FROM ", table_k_nearest_flows, "
-    GROUP BY flow_ref
-  )
-  SELECT 
-    f1.flow_ref AS flow1, 
-    f2.flow_ref AS flow2, 
-    cardinality(
-      ARRAY(
-        SELECT unnest(f1.closest_flows) 
-        INTERSECT 
-        SELECT unnest(f2.closest_flows)
-      )
-    ) AS common_flows
-  FROM ClosestFlows f1
-  CROSS JOIN ClosestFlows f2
-  WHERE f1.flow_ref < f2.flow_ref;")
+	query <- pste0("CREATE TEMP TABLE TempClosestFlows AS
+		SELECT flow_ref, ARRAY_AGG(flow_other) AS closest_flows
+		FROM ",
+	  table_k_nearest_flows,
+	  " GROUP BY flow_ref;")
+	dbExecute(con, query)
+	
+	query <- paste0("CREATE TABLE ",
+		table_common_flows,
+		" AS WITH Precomputed AS (
+		SELECT 
+		f1.flow_ref AS flow1, 
+		f2.flow_ref AS flow2, 
+		cardinality(
+			ARRAY(
+				SELECT unnest(f1.closest_flows) 
+				INTERSECT 
+				SELECT unnest(f2.closest_flows)
+			)
+		) AS common_flows
+		FROM TempClosestFlows f1
+		CROSS JOIN TempClosestFlows f2
+		WHERE f1.flow_ref < f2.flow_ref
+	)
+	SELECT *
+		FROM Precomputed
+	WHERE common_flows > ", int_k/2, ";")
+	dbExecute(con, query)
+	
+	query <- paste0("DROP TABLE TempClosestFlows;")
 	dbExecute(con, query)
 }
 
@@ -393,6 +403,7 @@ psql_calc_nd <- function(con, table_mapped_points,
   INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
   INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
   where m1.id < m2.id;")
+	cat(query)
 	dbExecute(con, query)
 }
 

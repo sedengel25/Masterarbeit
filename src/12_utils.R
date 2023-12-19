@@ -62,20 +62,49 @@ psql_get_directly_reachable_flows <- function(con,
 psql_add_cluster_id <- function(con, table_viz, table_cluster) {
 	
 	
-	query <- paste0("ALTER TABLE ",
-									table_viz,
-									" ADD COLUMN cluster_id INTEGER;")
-	dbExecute(con, query)
+	query <- paste0("SELECT EXISTS (
+		SELECT 1 
+		FROM information_schema.columns 
+		WHERE 
+		table_schema = 'public' AND 
+		table_name = '",
+    table_viz,
+    "' AND column_name = 'cluster_id_",
+    char_alpha,
+    "');")
+	
+
+	req <- dbSendQuery(con, query)
+	answer <- dbFetch(req) %>% as.logical()
+	print(answer)
+	if(answer == FALSE){
+		query <- paste0("ALTER TABLE ",
+										table_viz,
+										" ADD COLUMN cluster_id_",
+										char_alpha,
+										" INTEGER;")
+		dbExecute(con, query)
+	}
+	
+
 	
 	query <- paste0("UPDATE ", table_viz,
-									" SET cluster_id = ",
+									" SET cluster_id_",
+									char_alpha,
+									" = ",
 									table_cluster,
+									"_",
+									char_alpha,
 									".cluster_id FROM ",
 									table_cluster,
+									"_",
+									char_alpha,
 									" WHERE ",
 									table_viz,
 									".id = ",
 									table_cluster,
+									"_",
+									char_alpha,
 									".flow1;")
 	cat(query)
 	dbExecute(con, query)
