@@ -112,3 +112,29 @@ psql_compare_directly_reachable <- function(con,
 									table_reachable_flows_compared, ".flow1 = COALESCE(a.flow1, b.flow1);")
 	dbExecute(con, query)
 }
+
+helper_function_common_flows <- function(i, thresh.common = 1L) {
+	flow.i = dt_knn_rand_split[[i]]
+	print(i)
+	# compute amount of common flows per flow pair
+	common.flows = lapply((i + 1L):int_n_ids, function(j) {
+		n.common = length(intersect(flow.i, dt_knn_rand_split[[j]]))
+		if (n.common >= thresh.common) {
+			return(c(int_n_ids[i], int_n_ids[j], n.common))
+		} else {
+			return(NULL)
+		}
+	})
+
+	# get rid of empty pairs
+	cf = unlist(common.flows)
+	lcf = length(cf)
+	
+	# if a flow pair exists return it, otherwise return NULL
+	if (lcf > 0L) {
+		cf = matrix(cf, ncol = 3L, byrow = TRUE)
+		return(cf)
+	} else {
+		return(NULL)
+	}
+}

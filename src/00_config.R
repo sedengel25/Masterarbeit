@@ -49,6 +49,8 @@ library(purrr)
 library(deps)
 library(NCmisc)
 library(lwgeom)
+library(tidyverse)
+library(parallel)
 ################################################################################
 # Paths
 ################################################################################

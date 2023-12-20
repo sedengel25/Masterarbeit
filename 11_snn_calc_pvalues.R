@@ -67,6 +67,10 @@ char_flows_pvalues <- paste0(char_city_prefix, "_flows_pvalues")
 char_flows_pvalues_rand <- paste0(char_city_prefix, "_flows_pvalues_rand")
 
 
+## specify number of cores to be used for parallelization (at most 10L)
+int_ncores = min(parallel::detectCores(), 10L)
+
+
 for(rep in 1:int_simulations){
 	cat("Rep: ",rep, "\n")
 	start_time <- Sys.time()
@@ -90,8 +94,8 @@ for(rep in 1:int_simulations){
 	psql_create_index(con, char_dest_rand, col = c("id", "line_id"))
 	
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("OD-points table created")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("Table with random OD-points created: ", dur, "\n")
 	# 2. Calc. ND between O-points and D-points
 	start_time <- Sys.time()
 	psql_calc_nd(con = con,
@@ -99,31 +103,31 @@ for(rep in 1:int_simulations){
 							 table_network = char_osm2po_subset,
 							 table_dist_mat =  char_dist_mat,
 							 table_nd =  char_origin_nd_rand)
-	
+
 	psql_create_index(con, char_origin_nd_rand, col = c("o_m", "o_n"))
-	
-	
+
+
 	psql_calc_nd(con = con,
 							 table_mapped_points = char_dest_rand,
 							 table_network = char_osm2po_subset,
 							 table_dist_mat =  char_dist_mat,
 							 table_nd =  char_dest_nd_rand)
-	
+
 	query <- paste0("ALTER TABLE ",
 									char_dest_nd_rand,
 									" RENAME COLUMN o_m TO d_m;")
 	dbExecute(con, query)
-	
+
 	query <- paste0("ALTER TABLE ",
 									char_dest_nd_rand,
 									" RENAME COLUMN o_n TO d_n;")
 	dbExecute(con, query)
-	
+
 	psql_create_index(con, char_dest_nd_rand, col = c("d_m", "d_n"))
-	
+
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("NDs between OD-points calculated")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("NDs between points calculated: ", dur, "\n")
 	
 	# 3. Calc. ND between flows
 	start_time <- Sys.time()
@@ -134,8 +138,8 @@ for(rep in 1:int_simulations){
 	psql_create_index(con, char_flows_nd_rand, col = c("flow_m", "flow_n"))
 	
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("NDs between flows calculated")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("NDs between flows calculated: ", dur, "\n")
 	
 	# 4. Get knn-flows
 	start_time <- Sys.time()
@@ -146,19 +150,47 @@ for(rep in 1:int_simulations){
 	psql_create_index(con, char_k_nearest_flows_rand, col = c("flow_ref", "flow_other"))
 	
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("Table with k nearest flows created")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("Table with k-nearest flows created: ", dur, "\n")
 	
 	# 5. Calc. common flows
 	start_time <- Sys.time()
-	psql_get_number_of_common_flows(con = con,
-																	table_k_nearest_flows = char_k_nearest_flows_rand,
-																	table_common_flows = char_common_flows_rand)
-	psql_create_index(con, char_common_flows_rand, col = c("flow1", "flow2"))
+	dt_knn_rand = dbReadTable(conn = con, 
+														name = char_k_nearest_flows_rand) %>% as.data.table
 	
+	## preprocess nearest flow data, i.e., store all values as integer (memory saving), 
+	## extract nearest flows per reference flow (nf.split), 
+	## and produce helper objects (flow.ids and n)
+	dt_knn_rand = dt_knn_rand %>% 
+		mutate_all(as.integer)
+	
+	dt_knn_rand_split = split(dt_knn_rand$flow_other, 
+														dt_knn_rand$flow_ref)
+	dt_knn_rand_flow_ids = unique(dt_knn_rand$flow_ref)
+	int_n_ids = length(dt_knn_rand_flow_ids)
+	
+	list_common_flows = parallel::mclapply(seq_len(int_n_ids - 1L), 
+																				 helper_function_common_flows, 
+																				 thresh.common = 1L, 
+																				 mc.cores = 1)
+	
+	dt_common_flows = do.call(rbind, list_common_flows) %>%
+		as.data.table() %>%
+		setNames(c("flow1", "flow2", "common_flows")) %>%
+		filter(common_flows > int_k/2)
+	
+	dbWriteTable(conn = con, 
+							 name = char_common_flows_rand, 
+							 value = dt_common_flows)
+	
+	# psql_get_number_of_common_flows(con = con,
+	# 																table_k_nearest_flows = char_k_nearest_flows_rand,
+	# 																table_common_flows = char_common_flows_rand)
+	psql_create_index(con, char_common_flows_rand, col = c("flow1", "flow2"))
+
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("Table with common flows created")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("Table with common flows created: ", dur, "\n")
 	
 	# 6. Calc. directly-reachable flows
 	start_time <- Sys.time()
@@ -170,8 +202,8 @@ for(rep in 1:int_simulations){
 	psql_create_index(con, char_reachable_rand, col = c("flow1"))
 	
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("directly-reachable-column added")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("Column 'directly-reachable' added: ", dur, "\n")
 
 	start_time <- Sys.time()
 	if(rep==1){
@@ -201,8 +233,8 @@ for(rep in 1:int_simulations){
 		table_reachable_flows_compared = char_flows_pvalues)
 	
 	end_time <- Sys.time()
-	print(difftime(end_time, start_time, units = "mins"))
-	print("SNN-Densities compared & table updated")
+	dur <- difftime(end_time, start_time, units = "mins")
+	cat("SNN-densities compared & table updated: ", dur, "\n")
 	query <- paste0("DROP TABLE IF EXISTS ", char_reachable_rand)
 	dbExecute(con, query)
 }
