@@ -8,43 +8,13 @@ source("./src/00_utils.R")
 source("./src/00_config_psql.R")
 source("./src/08_utils.R")
 
-# i <- 1
-# for(file in c("10_snn_calc_pvalues.R",
-# 							"src/00_config_psql.R",
-# 							"src/10_utils.R")){
-# 	if(i == 1){
-# 		df <- get_packages_used(file = file)
-# 		print(df)
-# 		i <- i + 1
-# 	} else {
-# 		df <- rbind(df, get_packages_used(file = file))
-# 		i <- i + 1
-# 	}
-# 
-# }
-# 
-# df_expanded <- df %>%
-# 	mutate(Paket = strsplit(as.character(Paket), ",")) %>%
-# 	unnest(Paket) %>%
-# 	mutate(Paket = gsub("c\\(|\\)|\"", "", Paket)) %>%
-# 	separate_rows(Paket, sep = "\\s+") %>%
-# 	filter(Paket != "") %>%
-# 	as.data.table
-# 
-# packages <- unique(df_expanded$Paket)
-# packages[which(packages!=c(".GlobalEnv", 
-# 														 "package:base", 
-# 														 "package:stats",
-# 														 "package:utils",
-# 														 "character(0"))]
-
 ################################################################################
 # Configuration
 ################################################################################
 int_crs <- 32632
-int_buffer <- 5000
-char_city <- "cologne"
-char_city_prefix <- "col"
+int_buffer <- 100
+char_city <- "berlin"
+char_city_prefix <- "ber"
 
 
 
@@ -57,7 +27,7 @@ char_bat_file <- paste0(char_city, ".bat")
 
 # Executing the bat-file of the chosen city creates a sql file with all edges
 cmd_osm2po <- paste('cmd /c "cd /d', path_osm2po, '&&', char_bat_file, '"')
-system(cmd_osm2po)
+#system(cmd_osm2po)
 
 
 # Run the sql-file to get the corresponding table
@@ -65,29 +35,36 @@ sql_filename <- list.files(paste0(path_osm2po, "/", char_city_prefix, "/"), patt
 sql_file <- paste0(path_osm2po, "/", char_city_prefix, "/", sql_filename)
 cmd_execute_sql_file(path_to_sql_file = sql_file)
 
-# Update geometry
-psql_change_geometry_type(con, table = char_osm2po, crs = int_crs)
+
+srid <- psql_get_srid(con, table = char_osm2po)
+psql_set_srid(con, table = char_osm2po, srid = srid)
+psql_transform_coordinates(con, table = char_osm2po, crs = int_crs)
 psql_update_srid(con, table = char_osm2po, crs = int_crs)
+
+
 
 ################################################################################
 # Create smaller bounding-box for huge network
 ################################################################################
+file_shp <- mget(paste0("file_shp_", char_city_prefix)) %>% as.character
+# file_sql <- mget(paste0("file_sql_", char_city_prefix)) %>% as.character
 char_shp <- paste0(char_city_prefix, "_stadtgrenzen_shp")
 char_bbox <- paste0(char_city_prefix, "_bbox")
 
-# Use shp2pgsql to turn shapefile of city's borders in psql-table
-char_cmd_psql_shp_to_sql <- sprintf('"%s" -I -s %s "%s" public.%s > "%s"',
-																		file_exe_shp2psql,
-																		int_crs,
-																		file_shp_col,
-																		char_shp,
-																		file_sql_col
-)
 
-cmd_write_sql_file(char_cmd_psql_shp_to_sql)
-psql_drop_table_if_exists(con, char_shp)
-cmd_execute_sql_file(file_sql_col)
+st_write(st_read(file_shp), con, 
+				 char_shp,
+				 schema = "public", 
+				 append = FALSE)
 
+# Get SRID
+srid <- psql_get_srid(con, table = char_shp)
+# Set SRID, otherwise ST_Transform won't work
+psql_set_srid(con, table = char_shp, srid = srid)
+# Change values of coordinates
+psql_transform_coordinates(con, table = char_shp, crs = int_crs)
+# Change SRID
+psql_update_srid(con, table = char_shp, crs = int_crs)
 
 psql_create_bbox(con, table_shp = char_shp, table_bbox = char_bbox)
 
@@ -136,7 +113,7 @@ g <- from_pandas_edgelist(df = dt,
 
 # Calculate all shortest paths between all nodes (stop after 5000m)
 all_to_all_shortest_paths_to_sqldb(con = con, dt = dt,
-                                     char_dist_mat = char_dist_mat,
+                                     table = char_dist_mat,
                                      g = g, buffer = int_buffer)
 
 # Create index for dist_mat

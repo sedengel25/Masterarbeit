@@ -98,11 +98,27 @@ path_dockerbuild <- "C:/dockerbuild/"
 
 ### Output ---------------------------------------------------------------------
 path_output_07 <- here::here("output/07")
+
 path_output_08 <- here::here("output/08")
+
 path_output_09 <- here::here("output/09")
+
 path_output_12 <- here::here("output/12")
+
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
+
+################################################################################
+# Create folders
+################################################################################
+path_variables <- ls(pattern = "^path")
+lapply(mget(path_variables), function(paths) {
+	for (x in paths) {
+		if (!dir.exists(x)) {
+			dir.create(x, recursive = TRUE)
+		}
+	}
+})
 ################################################################################
 # Files
 ################################################################################
@@ -164,12 +180,14 @@ file_exe_psql <- "C:/Program Files/PostgreSQL/16/bin/psql.exe"
 file_exe_shp2psql <- "C:/Program Files/PostgreSQL/16/bin/shp2pgsql.exe"
 file_exe_pg_dump <- "C:/Program Files/PostgreSQL/16/bin/pg_dump.exe"
 file_shp_col <- here::here(path_external_data, "col/Stadtbezirk.shp")
+file_shp_ber <- here::here(path_external_data, "ber/bezirksgrenzen.shp")
 
 
 
 ### Output ---------------------------------------------------------------------
 # 8
 file_sql_col <- here::here(path_output_08, "col_stadtbezirk.sql")
+file_sql_ber <- here::here(path_output_08, "ber_stadtbezirk.sql")
 
 # 9
 file_rds_int_k <- here::here(path_output_09, "k.rds")

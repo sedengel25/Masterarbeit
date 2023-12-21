@@ -205,7 +205,10 @@ psql_create_spatial_index <- function(con, table) {
 	query <- paste0("DROP INDEX IF EXISTS ", char_idx)
 	dbExecute(con, query)
 	
-	query <- paste0("CREATE INDEX ON ",  table, " USING GIST (geometry);")
+	
+	name_geom_col <- psql_get_name_of_geom_col(con, table)
+	query <- paste0("CREATE INDEX ON ",  table, " USING GIST (",
+									name_geom_col,");")
 	dbExecute(con, query)
 }
 
@@ -403,6 +406,7 @@ psql_calc_nd <- function(con, table_mapped_points,
   INNER JOIN ", table_dist_mat, " pi_pl ON pi_pl.source = LEAST(e_ij.source, e_kl.target) AND pi_pl.target = GREATEST(e_ij.source, e_kl.target)
   INNER JOIN ", table_dist_mat, " pj_pk ON pj_pk.source = LEAST(e_ij.target, e_kl.source) AND pj_pk.target = GREATEST(e_ij.target, e_kl.source)
   where m1.id < m2.id;")
+	cat(query)
 	dbExecute(con, query)
 }
 
@@ -473,6 +477,57 @@ psql_count_rows <- function(con, table) {
 	int_count <- data %>% pull %>% as.numeric
 	return(int_count)
 }
+# Documentation: psql_get_srid
+# Usage: psql_get_srid(con, table)
+# Description: Get SRID of psql-table
+# Args/Options: con, table
+# Returns: ...
+# Output: ...
+# Action: Execute psql-query 
+psql_get_srid <- function(con, table) {
+	name_geom_col <- psql_get_name_of_geom_col(con, table)
+	query <- paste0("SELECT ST_SRID(", name_geom_col, ") FROM ", table, " LIMIT 1;")
+	srid <- dbGetQuery(con, query) %>% as.integer
+	return(srid)
+}
+# Documentation: psql_set_srid
+# Usage: psql_set_srid(con, table)
+# Description: Set SRID of psql-table
+# Args/Options: con, table
+# Returns: ...
+# Output: ...
+# Action: Execute psql-query 
+psql_set_srid <- function(con, table, srid) {
+	name_geom_col <- psql_get_name_of_geom_col(con, table)
+	query <- paste0("UPDATE ",
+									table,
+									" SET ",
+									name_geom_col,
+									" = ST_SetSRID(",
+									name_geom_col,
+									",",
+									srid,
+									");")
+	dbExecute(con, query)
+}
+
+# Documentation: psql_get_name_of_geom_col
+# Usage: psql_get_name_of_geom_col(con, table)
+# Description: Get name of the geometry column
+# Args/Options: con, table
+# Returns: ...
+# Output: ...
+# Action: Execute psql-query 
+psql_get_name_of_geom_col <- function(con, table) {
+	query <- paste0("SELECT column_name
+  FROM information_schema.columns
+  WHERE table_schema = 'public' AND table_name = '",
+									table,
+									"' AND udt_name = 'geometry';")
+	
+	col_name <- dbGetQuery(con, query) %>% as.character()
+	return(col_name)
+}
 
 # Documentation: psql_update_srid
 # Usage: psql_update_srid(con, table, crs)
@@ -482,9 +537,12 @@ psql_count_rows <- function(con, table) {
 # Output: ...
 # Action: Executing a psql-query
 psql_update_srid <- function(con, table, crs) {
+	name_geom_col <- psql_get_name_of_geom_col(con, table)
 	query <- paste0("SELECT UpdateGeometrySRID('",
 									table,
-									"','geometry',",
+									"','",
+									name_geom_col,
+									"',",
 									crs,
 									");")
 	dbExecute(con, query)
@@ -568,7 +626,7 @@ get_packages_used <- function(file) {
 cmd_write_sql_dump <- function(table, data_sub_folder) {
 	char_batch <- paste0(
 		' "',
-		path_pg_dump_exe,
+		file_exe_pg_dump,
 		'" ',
 		" -h ", host, 
 		" -U ", user,
@@ -579,11 +637,11 @@ cmd_write_sql_dump <- function(table, data_sub_folder) {
 	)
 	char_batch <- gsub("\t|\n", "", char_batch)
 	cat(char_batch)
-	path_batch_dist_mat <- here::here(data_sub_folder,
+	file_batch_dist_mat <- here::here(data_sub_folder,
 																		paste0(table, ".bat"))
-	write(char_batch, path_batch_dist_mat)
+	write(char_batch, file_batch_dist_mat)
 	
 	Sys.setenv(PGPASSWORD = pw)
-	system(path_batch_dist_mat)
+	system(file_batch_dist_mat)
 	Sys.unsetenv("PGPASSWORD")
 }
