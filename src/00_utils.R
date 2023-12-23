@@ -397,6 +397,56 @@ psql_calc_nd <- function(con, table_mapped_points,
   	m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
   	m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
   ) AS nd
+  ,
+  CASE 
+    WHEN m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pi_pk.source
+    WHEN m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pj_pl.source
+    WHEN m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pi_pl.source
+    ELSE pj_pk.source
+  END AS shortest_path_source,
+  CASE 
+    WHEN m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pi_pk.target
+    WHEN m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pj_pl.target
+    WHEN m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0) = 
+         LEAST(
+           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
+           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
+           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
+           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
+         ) THEN pi_pl.target
+    ELSE pj_pk.target
+  END AS shortest_path_target
+
   FROM ", table_mapped_points, " m1
   CROSS JOIN ", table_mapped_points, " m2
   INNER JOIN ", table_network, " e_ij ON m1.line_id = e_ij.id

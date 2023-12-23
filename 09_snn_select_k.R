@@ -12,10 +12,11 @@ source("./src/09_utils.R")
 ################################################################################
 # Configuration
 ################################################################################
-int_crs <- 32632
-int_buffer <- 5000
-char_city_prefix <- "col"
+int_crs <- read_rds(file_rds_int_crs)
+int_buffer <- read_rds(file_rds_int_buffer)
+char_city_prefix <- read_rds(file_rds_char_city_prefix)
 char_pow_tod <- "wd_m"
+write_rds(char_pow_tod, file_rds_char_pow_tod)
 # char_vis <- paste0(char_city_prefix, "_vis_flows")
 
 
@@ -55,12 +56,12 @@ dt <- dt %>%
 # Map points to street network
 ################################################################################
 char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
-char_origin <- paste0(char_city_prefix, "_origin_", char_pow_tod)
-char_dest <- paste0(char_city_prefix, "_dest_", char_pow_tod)
-char_origin_mapped <- paste0(char_city_prefix, "_origin_mapped_", char_pow_tod)
-char_dest_mapped <- paste0(char_city_prefix, "_dest_mapped_", char_pow_tod)
-char_origin_nd <- paste0(char_city_prefix, "_origin_nds_", char_pow_tod)
-char_dest_nd <- paste0(char_city_prefix, "_dest_nds_", char_pow_tod)
+char_origin <- paste0(char_city_prefix, "_", int_buffer, "_origin_", char_pow_tod)
+char_dest <- paste0(char_city_prefix, "_", int_buffer, "_dest_", char_pow_tod)
+char_origin_mapped <- paste0(char_city_prefix, "_", int_buffer, "_origin_mapped_", char_pow_tod)
+char_dest_mapped <- paste0(char_city_prefix, "_", int_buffer, "_dest_mapped_", char_pow_tod)
+char_origin_nd <- paste0(char_city_prefix, "_", int_buffer, "_origin_nds_", char_pow_tod)
+char_dest_nd <- paste0(char_city_prefix, "_", int_buffer, "_dest_nds_", char_pow_tod)
 char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
 
 
@@ -91,9 +92,9 @@ psql_create_index(con, table = char_dest_mapped,
 ################################################################################
 # Calculate network distances
 ################################################################################
-char_origin_nd_no_dup <- paste0(char_city_prefix, "_origin_nds_no_dup_", char_pow_tod)
-char_dest_nd_no_dup <- paste0(char_city_prefix, "_dest_nds_no_dup_", char_pow_tod)
-char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
+char_origin_nd_no_dup <- paste0(char_city_prefix, "_", int_buffer, "_origin_nds_no_dup_", char_pow_tod)
+char_dest_nd_no_dup <- paste0(char_city_prefix, "_", int_buffer, "_dest_nds_no_dup_", char_pow_tod)
+char_flows_nd <- paste0(char_city_prefix, "_", int_buffer, "_flows_nd")
 
 
 dt_network <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%

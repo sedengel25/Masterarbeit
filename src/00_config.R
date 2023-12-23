@@ -188,10 +188,13 @@ file_shp_ber <- here::here(path_external_data, "ber/bezirksgrenzen.shp")
 # 8
 file_sql_col <- here::here(path_output_08, "col_stadtbezirk.sql")
 file_sql_ber <- here::here(path_output_08, "ber_stadtbezirk.sql")
+file_rds_int_buffer <- here::here(path_output_08, "buffer.rds")
+file_rds_int_crs <- here::here(path_output_08, "crs.rds")
+file_rds_char_city_prefix <- here::here(path_output_08, "city_prefix.rds")
 
 # 9
 file_rds_int_k <- here::here(path_output_09, "k.rds")
-
+file_rds_char_pow_tod <- here::here(path_output_09, "pow_tod.rds")
 
 
 

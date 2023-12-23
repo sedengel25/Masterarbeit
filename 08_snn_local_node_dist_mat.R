@@ -12,9 +12,12 @@ source("./src/08_utils.R")
 # Configuration
 ################################################################################
 int_crs <- 32632
-int_buffer <- 100
-char_city <- "berlin"
-char_city_prefix <- "ber"
+write_rds(int_crs, file_rds_int_crs)
+int_buffer <- 5000
+write_rds(int_buffer, file_rds_int_buffer)
+char_city <- "cologne"
+char_city_prefix <- "col"
+write_rds(char_city_prefix, file_rds_char_city_prefix)
 
 
 
@@ -96,7 +99,10 @@ char_dist_mat_red_no_dup <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_r
 dt <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%
 	mutate(m = km*1000) %>%
 	select(id, source, target, m)
-
+# summary(dt)
+# unique(dt$source) %>% length
+# unique(dt$target) %>% length
+c(dt$source, dt$target) %>% unique %>% length
 # Connect to miniconda to execute Python code
 reticulate::conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
 
@@ -112,6 +118,7 @@ g <- from_pandas_edgelist(df = dt,
 
 
 # Calculate all shortest paths between all nodes (stop after 5000m)
+
 all_to_all_shortest_paths_to_sqldb(con = con, dt = dt,
                                      table = char_dist_mat,
                                      g = g, buffer = int_buffer)
@@ -165,3 +172,4 @@ cmd_write_sql_dump(table = char_osm2po_subset,
 
 cmd_write_sql_dump(table = char_dist_mat, 
 									 data_sub_folder = path_processed_data_8)
+

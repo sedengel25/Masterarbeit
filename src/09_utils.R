@@ -63,20 +63,24 @@ psql_map_od_points_to_network <- function(con,
 	# Map origin points
 	query <- paste0("DROP TABLE IF EXISTS ", table_mapped_points, ";")
 	dbExecute(con, query)
-	
+	name_geom_col <- psql_get_name_of_geom_col(con, table_network)
 	query <- paste0("CREATE TABLE ", table_mapped_points, " AS SELECT
     point.id,
     line.id AS line_id,
-    ST_ClosestPoint(line.geometry, point.geometry) AS closest_point_on_line,
-    ST_Distance(line.geometry, point.geometry) AS distance_to_line,
-    ST_Distance(ST_StartPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_start,
-    ST_Distance(ST_EndPoint(line.geometry), ST_ClosestPoint(line.geometry, point.geometry)) AS distance_to_end
+    ST_ClosestPoint(line.", name_geom_col,", point.geometry) AS closest_point_on_line,
+    ST_Distance(line.", name_geom_col,", point.geometry) AS distance_to_line,
+    ST_Distance(ST_StartPoint(line.", name_geom_col,
+    "), ST_ClosestPoint(line.", name_geom_col, ", point.geometry)) AS distance_to_start,
+    ST_Distance(ST_EndPoint(line.", name_geom_col, 
+    "), ST_ClosestPoint(line.", name_geom_col, ", point.geometry)) AS distance_to_end
   FROM ", table_unmapped_points, " AS point CROSS JOIN LATERAL
-    (SELECT id, geometry
-     FROM ",  table_network, "
-     ORDER BY geometry <-> point.geometry
+    (SELECT id, ",
+     name_geom_col, " FROM ",  table_network, "
+     ORDER BY ",
+     name_geom_col, " <-> point.geometry
      LIMIT 1) AS line;
   ")
+	cat(query)
 	dbExecute(con, query)
 }
 
