@@ -173,6 +173,7 @@ psql_create_index(con, table = char_dest_nd_no_dup, col = c("d_m", "d_n"))
 psql_rename_table(con, 
 									table_old_name = char_dest_nd_no_dup,
 									table_new_name = char_dest_nd)
+
 # Create table with flow-nd-distances
 psql_calc_flow_nds(con, table_o_nds = char_origin_nd,
 									 table_d_nds = char_dest_nd,
@@ -188,19 +189,19 @@ psql_create_index(con, table = char_flows_nd, col = c("flow_m", "flow_n"))
 ################################################################################
 int_k_max <- 60
 
-# psql_create_kmax_knn_tables(con, 
-# 														k_max = int_k_max, 
-# 														city_prefix = char_city_prefix,
-# 														table_flows_nd = char_flows_nd)
+psql_create_kmax_knn_tables(con,
+														k_max = int_k_max,
+														city_prefix = char_city_prefix,
+														table_flows_nd = char_flows_nd)
 
-# dt_rkd <- create_rkd_dt(con, 
-# 												k_max = int_k_max, 
-# 												city_prefix = char_city_prefix)
-# ggplot() +
-# 	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
+dt_rkd <- create_rkd_dt(con,
+												k_max = int_k_max,
+												city_prefix = char_city_prefix)
+ggplot() +
+	geom_point(data = dt_rkd[-1,], aes(x = k, y = rkd))
 
 # Result of rkd-plot:
-int_k <- 30
+int_k <- 40
 dir.create(dirname(file_rds_int_k), recursive = TRUE, showWarnings = FALSE)
 write_rds(int_k, file_rds_int_k)
 

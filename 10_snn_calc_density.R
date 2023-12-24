@@ -13,7 +13,7 @@ char_k_nearest_flows <- paste0(char_city_prefix, "_", int_k, "_nearest_flows")
 char_reachable <- paste0(char_city_prefix, "_", int_k, "_numb_reachable_flows")
 char_common_flows <- paste0(char_city_prefix, "_", int_k, "_common_flows")
 
-
+# Get k nearest flows
 psql_get_k_nearest_flows(con,
 												 k = int_k,
 												 table_flows = char_flows_nd,
@@ -34,10 +34,10 @@ psql_get_number_directly_reachable_flows(con, k = int_k,
 																				 table_common_flows = char_common_flows,
 																				 table_reachable_flows = char_reachable)
 
-
+# Write sql-fiels to dockerbuild
 cmd_write_sql_dump(table = char_flows_nd, 
-									 data_sub_folder = path_processed_data_9)
+									 data_sub_folder = path_processed_data_10)
 
 
 cmd_write_sql_dump(table = char_reachable,
-									 data_sub_folder = path_processed_data_9)
+									 data_sub_folder = path_processed_data_10)

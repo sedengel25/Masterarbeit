@@ -154,28 +154,41 @@ all_to_all_shortest_paths_to_sqldb <- function(con, dt, table, g, buffer) {
 	for (node in nodes){
 
 		### Actual paths
-		res = single_source_dijkstra(g, source = node, 
-																						 weight = "m", cutoff = buffer)
-
-		distance_data <- res[[1]]
-		path_data <- res[[2]]
-
-		dt_dist <- do.call(rbind, lapply(names(distance_data), function(x) 
-			data.table(source = node, target = x, m = distance_data[[x]])))
+		# res = single_source_dijkstra(g, source = node, 
+		# 																				 weight = "m", cutoff = buffer)
+		#
+		# distance_data <- res[[1]]
+		# path_data <- res[[2]]
+		# 
+		# dt_dist <- do.call(rbind, lapply(names(distance_data), function(x) 
+		# 	data.table(source = node, target = x, m = distance_data[[x]])))
+		# 
+		# dt_path <- do.call(rbind, lapply(names(path_data), function(x) 
+		# 	data.table(source = node, target = x, path = I(list(path_data[[x]])))))
+		# 
+		# dt_final <- merge(dt_dist, dt_path, by = c("source", "target"))
+		# 
+		# dt_final$path <- sapply(dt_final$path, function(x) {
+		# 	path_string <- paste(x, collapse = ", ")
+		# 	paste0("{", path_string, "}")
+		# })
 		
-		dt_path <- do.call(rbind, lapply(names(path_data), function(x) 
-			data.table(source = node, target = x, path = I(list(path_data[[x]])))))
-		
-		dt_final <- merge(dt_dist, dt_path, by = c("source", "target"))
+		### Length only
+		res = single_source_dijkstra_path_length(g, source = node,
+																 weight = "m", cutoff = buffer)
 
-		dt_final$path <- sapply(dt_final$path, function(x) {
-			path_string <- paste(x, collapse = ", ")
-			paste0("{", path_string, "}")
-		})
+		targets = names(res) %>% as.integer
+		sources = rep(node, length(targets))
+		distances = res %>% as.numeric
+		dt_append <- data.table(
+			source = sources,
+			target = targets,
+			m = distances
+		)
 
 		dbAppendTable(conn = con,
 														 name = table,
-														 value = dt_final
+														 value = dt_append
 		)
 		i <- i +1
 		setTxtProgressBar(pb, i)

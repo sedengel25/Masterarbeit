@@ -30,7 +30,7 @@ char_bat_file <- paste0(char_city, ".bat")
 
 # Executing the bat-file of the chosen city creates a sql file with all edges
 cmd_osm2po <- paste('cmd /c "cd /d', path_osm2po, '&&', char_bat_file, '"')
-#system(cmd_osm2po)
+system(cmd_osm2po)
 
 
 # Run the sql-file to get the corresponding table
@@ -39,6 +39,7 @@ sql_file <- paste0(path_osm2po, "/", char_city_prefix, "/", sql_filename)
 cmd_execute_sql_file(path_to_sql_file = sql_file)
 
 
+# Transform coordinate system
 srid <- psql_get_srid(con, table = char_osm2po)
 psql_set_srid(con, table = char_osm2po, srid = srid)
 psql_transform_coordinates(con, table = char_osm2po, crs = int_crs)
@@ -50,7 +51,6 @@ psql_update_srid(con, table = char_osm2po, crs = int_crs)
 # Create smaller bounding-box for huge network
 ################################################################################
 file_shp <- mget(paste0("file_shp_", char_city_prefix)) %>% as.character
-# file_sql <- mget(paste0("file_sql_", char_city_prefix)) %>% as.character
 char_shp <- paste0(char_city_prefix, "_stadtgrenzen_shp")
 char_bbox <- paste0(char_city_prefix, "_bbox")
 
@@ -68,9 +68,9 @@ psql_set_srid(con, table = char_shp, srid = srid)
 psql_transform_coordinates(con, table = char_shp, crs = int_crs)
 # Change SRID
 psql_update_srid(con, table = char_shp, crs = int_crs)
-
+# Create bounding box based on city's borders
 psql_create_bbox(con, table_shp = char_shp, table_bbox = char_bbox)
-
+# Turn polygon into linestring
 psql_ls_to_polygon(con, table = char_bbox)
 
 psql_create_spatial_index(con, table = char_bbox)
@@ -96,13 +96,11 @@ char_dist_mat <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat")
 char_dist_mat_red <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red")
 char_dist_mat_red_no_dup <- paste0(char_city_prefix,"_",int_buffer, "_dist_mat_red_no_dup")
 
+# Read sub-street-network into datatable
 dt <- RPostgres::dbReadTable(con, char_osm2po_subset) %>%
 	mutate(m = km*1000) %>%
 	select(id, source, target, m)
-# summary(dt)
-# unique(dt$source) %>% length
-# unique(dt$target) %>% length
-c(dt$source, dt$target) %>% unique %>% length
+
 # Connect to miniconda to execute Python code
 reticulate::conda_list(conda = "C:/Users/Seppi/AppData/Local/r-miniconda/_conda.exe")
 
@@ -117,8 +115,7 @@ g <- from_pandas_edgelist(df = dt,
 													edge_key = "id")
 
 
-# Calculate all shortest paths between all nodes (stop after 5000m)
-
+# Calculate all shortest paths between all nodes (stop after 'int_buffer'-m)
 all_to_all_shortest_paths_to_sqldb(con = con, dt = dt,
                                      table = char_dist_mat,
                                      g = g, buffer = int_buffer)
@@ -166,7 +163,7 @@ psql_rename_table(con,
 									table_new_name = char_dist_mat)
 
 
-
+# Write sql-files to dockerbuild
 cmd_write_sql_dump(table = char_osm2po_subset, 
 									 data_sub_folder = path_processed_data_8)
 

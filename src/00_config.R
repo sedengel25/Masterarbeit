@@ -119,6 +119,20 @@ lapply(mget(path_variables), function(paths) {
 		}
 	}
 })
+
+
+path_variables <- ls(pattern = "^path")
+lapply(mget(path_variables), function(paths) {
+	for (x in paths) {
+		print(paste("Current working directory:", getwd()))
+		print(paste("Attempting to create:", x))
+		if (!dir.exists(x)) {
+			dir.create(x, recursive = TRUE)
+		}
+		print(paste("Directory after creation attempt:", getwd()))
+	}
+})
+
 ################################################################################
 # Files
 ################################################################################
@@ -187,7 +201,7 @@ file_shp_ber <- here::here(path_external_data, "ber/bezirksgrenzen.shp")
 ### Output ---------------------------------------------------------------------
 # 8
 file_sql_col <- here::here(path_output_08, "col_stadtbezirk.sql")
-file_sql_ber <- here::here(path_output_08, "ber_stadtbezirk.sql")
+# file_sql_ber <- here::here(path_output_08, "ber_stadtbezirk.sql")
 file_rds_int_buffer <- here::here(path_output_08, "buffer.rds")
 file_rds_int_crs <- here::here(path_output_08, "crs.rds")
 file_rds_char_city_prefix <- here::here(path_output_08, "city_prefix.rds")

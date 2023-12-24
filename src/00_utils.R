@@ -265,6 +265,7 @@ psql_get_k_nearest_flows <- function(con, k, table_flows, table_k_nearest_flows)
 	
 	query <- paste0("DROP TABLE IF EXISTS ", table_k_nearest_flows)
 	dbExecute(con, query)
+	print("hi")
 	
 	query <- paste0("create table ", table_k_nearest_flows, " as
   								WITH SymmetricFlows AS (
@@ -290,6 +291,7 @@ psql_get_k_nearest_flows <- function(con, k, table_flows, table_k_nearest_flows)
   								RankedFlows
   								WHERE
   								rn <= ", k, ";")
+	cat(query)
 	dbExecute(con, query)
 }
 
@@ -306,7 +308,7 @@ psql_get_number_of_common_flows <- function(con, table_k_nearest_flows, table_co
 	query <- paste0("DROP TABLE IF EXISTS ", table_common_flows)
 	dbExecute(con, query)
 	
-	query <- pste0("CREATE TEMP TABLE TempClosestFlows AS
+	query <- paste0("CREATE TEMP TABLE TempClosestFlows AS
 		SELECT flow_ref, ARRAY_AGG(flow_other) AS closest_flows
 		FROM ",
 	  table_k_nearest_flows,
@@ -397,56 +399,6 @@ psql_calc_nd <- function(con, table_mapped_points,
   	m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
   	m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
   ) AS nd
-  ,
-  CASE 
-    WHEN m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pi_pk.source
-    WHEN m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pj_pl.source
-    WHEN m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pi_pl.source
-    ELSE pj_pk.source
-  END AS shortest_path_source,
-  CASE 
-    WHEN m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pi_pk.target
-    WHEN m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pj_pl.target
-    WHEN m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0) = 
-         LEAST(
-           m1.distance_to_start + m2.distance_to_start + COALESCE(pi_pk.m, 0),
-           m1.distance_to_end + m2.distance_to_end + COALESCE(pj_pl.m, 0),
-           m1.distance_to_start + m2.distance_to_end + COALESCE(pi_pl.m, 0),
-           m1.distance_to_end + m2.distance_to_start + COALESCE(pj_pk.m, 0)
-         ) THEN pi_pl.target
-    ELSE pj_pk.target
-  END AS shortest_path_target
-
   FROM ", table_mapped_points, " m1
   CROSS JOIN ", table_mapped_points, " m2
   INNER JOIN ", table_network, " e_ij ON m1.line_id = e_ij.id
