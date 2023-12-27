@@ -12,13 +12,19 @@ source("./src/08_utils.R")
 # Configuration
 ################################################################################
 int_crs <- 32632
-write_rds(int_crs, file_rds_int_crs)
 int_buffer <- 5000
-write_rds(int_buffer, file_rds_int_buffer)
 char_city <- "cologne"
 char_city_prefix <- "col"
+
+# Write to 'output' to use in further scripts
+write_rds(int_buffer, file_rds_int_buffer)
+write_rds(int_crs, file_rds_int_crs)
 write_rds(char_city_prefix, file_rds_char_city_prefix)
 
+# Write to 'dockerbuild' to use on VM
+write_rds(int_crs, file_rds_docker_int_crs)
+write_rds(int_buffer, file_rds_docker_int_buffer)
+write_rds(char_city_prefix, file_rds_docker_char_city_prefix)
 
 
 ################################################################################

@@ -113,6 +113,14 @@ psql_compare_directly_reachable <- function(con,
 	dbExecute(con, query)
 }
 
+
+# Documentation: helper_function_common_flows
+# Usage: helper_function_common_flows(i, thresh.common)
+# Description: Calculates common flows for each possible flow-pair
+# Args/Options: i, thresh.common
+# Returns: data.table
+# Output: ...
+# Action: ...
 helper_function_common_flows <- function(i, thresh.common = 1L) {
 	flow.i = dt_knn_rand_split[[i]]
 	print(i)

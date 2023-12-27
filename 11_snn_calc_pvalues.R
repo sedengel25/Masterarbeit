@@ -11,10 +11,10 @@ source("./src/11_utils.R")
 ################################################################################
 # Configuration
 ################################################################################
-char_city_prefix <- "col"
-char_pow_tod <- "wd_m"
-int_buffer <- 5000
-int_k <- 30
+char_city_prefix <- read_rds("./data/city_prefix.rds")
+char_pow_tod <- read_rds("./data/pow_tod.rds")
+int_buffer <- read_rds("./data/buffer.rds")
+int_k <- read_rds("./data/k.rds")
 
 int_m <- 5
 int_simulations <- 99
@@ -27,7 +27,7 @@ int_alpha <- 0.05
 ################################################################################
 char_osm2po_subset <- paste0(char_city_prefix, "_2po_4pgr_subset")
 char_osm2po_points <- paste0(char_city_prefix, "_2po_4pgr_points")
-char_flows_nd <- paste0(char_city_prefix, "_flows_nd")
+char_flows_nd <- paste0(char_city_prefix, "_", int_buffer, "_flows_nd")
 
 psql_create_random_od_points(con, m = int_m, table_network = char_osm2po_subset,
 														 table_all_points = char_osm2po_points)

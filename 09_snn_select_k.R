@@ -16,7 +16,12 @@ int_crs <- read_rds(file_rds_int_crs)
 int_buffer <- read_rds(file_rds_int_buffer)
 char_city_prefix <- read_rds(file_rds_char_city_prefix)
 char_pow_tod <- "wd_m"
+
+# Write to 'output' to use in further scripts
 write_rds(char_pow_tod, file_rds_char_pow_tod)
+
+# Write to 'dockerbuild' to use on VM
+write_rds(char_pow_tod, file_rds_docker_char_pow_tod)
 # char_vis <- paste0(char_city_prefix, "_vis_flows")
 
 
@@ -113,13 +118,16 @@ dt_mapped_dest <- RPostgres::dbReadTable(con, char_dest_mapped) %>%
 
 
 # Calculate NDs of all Origin points
+starttime <- Sys.time()
 psql_calc_nd(con = con,
 						table_mapped_points = char_origin_mapped,
 						table_network = char_osm2po_subset,
 						table_dist_mat =  char_dist_mat,
 						table_nd =  char_origin_nd)
 psql_create_index(con, table = char_origin_nd, col = c("o_m", "o_n"))
-
+endtime <- Sys.time()
+dur <- difftime(endtime, starttime, units = "mins")
+dur
 # Calculate NDs of all Destination points
 psql_calc_nd(con = con,
 						 table_mapped_points = char_dest_mapped,
@@ -204,6 +212,8 @@ ggplot() +
 int_k <- 40
 dir.create(dirname(file_rds_int_k), recursive = TRUE, showWarnings = FALSE)
 write_rds(int_k, file_rds_int_k)
+write_rds(int_k, file_rds_docker_int_k)
+
 
 
 

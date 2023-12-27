@@ -107,18 +107,20 @@ path_output_12 <- here::here("output/12")
 
 path_heatmaps_bolt_berlin_05_12 <- here::here(path_output_07, "BOLT/BERLIN/05_12")
 
+### Docker ---------------------------------------------------------------------
+path_docker <- "C:/dockerbuild/"
 
 ################################################################################
 # Create folders
 ################################################################################
-path_variables <- ls(pattern = "^path")
-lapply(mget(path_variables), function(paths) {
-	for (x in paths) {
-		if (!dir.exists(x)) {
-			dir.create(x, recursive = TRUE)
-		}
-	}
-})
+# path_variables <- ls(pattern = "^path")
+# lapply(mget(path_variables), function(paths) {
+# 	for (x in paths) {
+# 		if (!dir.exists(x)) {
+# 			dir.create(x, recursive = TRUE)
+# 		}
+# 	}
+# })
 
 
 path_variables <- ls(pattern = "^path")
@@ -211,8 +213,12 @@ file_rds_int_k <- here::here(path_output_09, "k.rds")
 file_rds_char_pow_tod <- here::here(path_output_09, "pow_tod.rds")
 
 
-
-
+### Docker ---------------------------------------------------------------------
+file_rds_docker_int_k <- paste0(path_docker, "data/k.rds")
+file_rds_docker_int_buffer <- paste0(path_docker, "data/buffer.rds")
+file_rds_docker_int_crs <- paste0(path_docker, "data/crs.rds")
+file_rds_docker_char_city_prefix <- here::here(path_docker, "data/city_prefix.rds")
+file_rds_docker_char_pow_tod <- paste0(path_docker, "data/pow_tod.rds")
 ################################################################################
 # Configurations
 ################################################################################
