@@ -51,6 +51,7 @@ library(NCmisc)
 library(lwgeom)
 library(tidyverse)
 library(parallel)
+library(furrr)
 ################################################################################
 # Paths
 ################################################################################
@@ -113,18 +114,8 @@ path_docker <- "C:/dockerbuild/"
 ################################################################################
 # Create folders
 ################################################################################
-# path_variables <- ls(pattern = "^path")
-# lapply(mget(path_variables), function(paths) {
-# 	for (x in paths) {
-# 		if (!dir.exists(x)) {
-# 			dir.create(x, recursive = TRUE)
-# 		}
-# 	}
-# })
-
-
 path_variables <- ls(pattern = "^path")
-lapply(mget(path_variables), function(paths) {
+lapply(mget(path_variables)[-length(path_variables)], function(paths) {
 	for (x in paths) {
 		print(paste("Current working directory:", getwd()))
 		print(paste("Attempting to create:", x))
@@ -134,6 +125,8 @@ lapply(mget(path_variables), function(paths) {
 		print(paste("Directory after creation attempt:", getwd()))
 	}
 })
+
+
 
 ################################################################################
 # Files
